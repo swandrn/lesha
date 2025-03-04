@@ -3,15 +3,20 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"lesha.com/server/internal/entity"
+	"lesha.com/server/internal/services"
 )
 
 func main() {
+	http.HandleFunc("/login", services.LoginHandler)
+	http.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler))
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file ", err.Error())
@@ -28,4 +33,6 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("Migration successful!")
+
+	
 }
