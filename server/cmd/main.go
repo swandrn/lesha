@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -14,8 +15,6 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/login", services.LoginHandler)
-	http.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler))
 
 	err := godotenv.Load()
 	if err != nil {
@@ -34,5 +33,15 @@ func main() {
 	}
 	fmt.Println("Migration successful!")
 
-	
+	r := mux.NewRouter()
+
+	// Start server
+
+	r.HandleFunc("/login", services.LoginHandler).Methods("POST")
+	r.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler)).Methods("GET")
+
+	port := 8080
+	fmt.Printf("Server running on http://localhost:%d\n", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), r))
+
 }

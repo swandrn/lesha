@@ -1,17 +1,18 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 )
-
-// Secret key for signing the JWT (keep it secure!)
-var jwtSecret = []byte("your-secret-key")
 
 // User structure (simulating a database)
 type User struct {
@@ -33,6 +34,13 @@ type Claims struct {
 
 // GenerateJWT creates a JWT token for authenticated users
 func GenerateJWT(userId string) (string, error) {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file ", err.Error())
+	}
+	jwtSecret := []byte(os.Getenv("JWT_SECRET"))
+
 	expirationTime := time.Now().Add(24 * time.Hour) // Token expires in 24 hours
 
 	claims := &Claims{
@@ -59,6 +67,12 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file ", err.Error())
+		}
+		jwtSecret := []byte(os.Getenv("JWT_SECRET"))
+
 		// Extract token from "Bearer <token>"
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
@@ -81,29 +95,50 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 // LoginHandler handles user authentication and returns a JWT
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	// Get username and password from query params (simplified for example)
-	username := r.URL.Query().Get("username")
-	password := r.URL.Query().Get("password")
 
-	// Validate user credentials
-	if storedPassword, ok := users[username]; !ok || storedPassword != password {
+	var creds User
+	err := json.NewDecoder(r.Body).Decode(&creds)
+	if err != nil {
+		http.Error(w, "Invalid request format", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	fmt.Printf("creds: %+v\n", creds)
+
+	if storedPassword, ok := users[creds.Username]; !ok || storedPassword != creds.Password {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	// Generate JWT
-	token, err := GenerateJWT(username)
+	token, err := GenerateJWT(creds.Username)
 	if err != nil {
 		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 		return
 	}
 
-	// Return token to the client
-	fmt.Fprintf(w, "Token: %s", token)
+	// Create a cookie containing the JWT
+	cookie := &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		Path:     "/",
+		MaxAge:   3600, // 1 hour
+	}
+
+	// Set the cookie in the response
+	http.SetCookie(w, cookie)
+
+	// Return success response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Successfully logged in",
+	})
 }
 
 // ProtectedHandler is an example of a secured endpoint
 func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome! You have access to this protected route.")
 }
-
