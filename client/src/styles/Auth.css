@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+body {
+    background-color: #36393e;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.auth-form {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 20px;
+    border-color: #66afe9;
+    border-width: 5px;
+    background-color: #000000;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-form div {
+    margin-bottom: 15px;
+}
+
+.auth-form label {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #ccc;
+}
+
+.auth-form input[type="text"],
+.auth-form input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    color: white;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.auth-form div:last-child {
+    display: flex;
+    justify-content: center;
+}
+
+.auth-form input[type="submit"] {
+    background-color: darkblue;
+    color: white;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: auto;
+}
+
+.auth-form input[type="submit"]:hover {
+    background-color: #66afe9;
+}
+
+.auth-form input:focus {
+    outline: none;
+    border-color: #66afe9;
+}
+
+.auth-form input[type="submit"]:active {
+    background-color: #66afe9;
+}
+
+.error-message {
+    color: red;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.title-container {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.title-line {
+    width: 50%;
+    margin: 10px auto;
+    border: 0;
+    border-top: 2px solid #66afe9;
+}
+
+.password-container {
+    position: relative;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #66afe9;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.password-toggle-btn:focus {
+    outline: none;
+}
