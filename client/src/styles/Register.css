@@ -8,6 +8,7 @@ body {
 
 .auth-form {
     max-width: 400px;
+    width: 100%;
     margin: 0 auto;
     padding: 20px;
     border-color: #66afe9;
@@ -17,7 +18,10 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
+    max-height: 80vh; /* Limite la hauteur à 80% de la fenêtre */
+    overflow-y: auto; /* Permet au contenu de défiler si trop grand */
 }
+
 
 .auth-form div {
     margin-bottom: 15px;
