@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import '../styles/Register.css';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function Register() {
     const [name, setName] = useState('');
@@ -7,8 +9,8 @@ function Register() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string>('');
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const navigate = useNavigate();
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
         if (!name || !email || !password) {
@@ -20,6 +22,20 @@ function Register() {
         console.log('Nom:', name);
         console.log('Email:', email);
         console.log('Mot de passe:', password);
+        await axios.post('http://localhost:8080/register', {
+            name,
+            email,
+            password
+        }).then((res) => {
+            console.log('response', res);
+            if (res.status === 200) {
+                console.log('redirecting to login');
+                navigate('/login');
+            }
+        }).catch((err) => {
+            console.log('error', err.response.data.message);
+            setError(err.response.data.message);
+        });
     };
 
     const togglePasswordVisibility = () => {
