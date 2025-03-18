@@ -32,6 +32,7 @@ func main() {
 
 	r.HandleFunc("/login", services.LoginHandler).Methods("POST")
 	r.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler)).Methods("GET")
+	r.HandleFunc("/logout", services.LogoutHandler).Methods("POST")
 
 	port := 8080
 	fmt.Printf("Server running on http://localhost:%d\n", port)
