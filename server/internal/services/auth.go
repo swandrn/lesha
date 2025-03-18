@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"lesha.com/server/internal/database"
 	"lesha.com/server/internal/entity"
@@ -32,6 +33,16 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Failed to hash password",
+		})
+		return
+	}
+	user.Password = string(hashedPassword)
+
 	log.Printf("User: %+v", user)
 	userRepository := repositories.NewUserRepository(database.Connect())
 	existingUser, err := userRepository.GetUserByEmail(user.Email)
@@ -163,7 +174,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user.Password != creds.Password {
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(creds.Password))
+	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invalid credentials",
@@ -238,7 +250,11 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "User is connected",
-		"user":    user,
+		"user": map[string]interface{}{
+			"id":    user.ID,
+			"email": user.Email,
+			"name":  user.Name,
+		},
 	})
 
 }
