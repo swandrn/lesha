@@ -16,12 +16,12 @@ const sampleServers: Server[] = [
 ];
 
 export function ServerList(): React.JSX.Element {
-
+/* 
   useEffect(() => {
     axios.get("http://localhost:8080/logout").then((res) => {
       console.log(res.data);
     });
-  }, []);
+  }, []); */
   return (
     <div className="w-20 md:w-24 h-screen bg-blue-700 text-white flex flex-col items-center p-2 shadow-lg">
       {sampleServers.map((server) => (

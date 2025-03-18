@@ -187,7 +187,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   false, // Set to true in production with HTTPS
 		Path:     "/",
-		MaxAge:   3600, // 1 hour
+		MaxAge:   24 * 60 * 60, // 1 hour
+		SameSite: http.SameSiteNoneMode,
 	}
 
 	// Set the cookie in the response
@@ -221,6 +222,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("GetUser", r)
 	cookie, err := r.Cookie("token")
 	if err != nil {
 		http.Error(w, "Missing token", http.StatusUnauthorized)
