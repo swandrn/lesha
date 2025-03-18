@@ -72,3 +72,8 @@ type Media struct {
 	Extension string
 	Url       string
 }
+
+type BlacklistedToken struct {
+	gorm.Model
+	Token string `gorm:"unique"`
+}

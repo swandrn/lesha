@@ -3,15 +3,16 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
+	"lesha.com/server/internal/database"
+	"lesha.com/server/internal/repositories"
 )
 
 // User structure (simulating a database)
@@ -61,20 +62,34 @@ func GenerateJWT(userId string) (string, error) {
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get token from the Authorization header
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
+		cookie, err := r.Cookie("token")
+
+		if cookie == nil {
 			http.Error(w, "Missing token", http.StatusUnauthorized)
 			return
 		}
 
-		err := godotenv.Load()
+		err = godotenv.Load()
 		if err != nil {
 			log.Fatal("Error loading .env file ", err.Error())
 		}
 		jwtSecret := []byte(os.Getenv("JWT_SECRET"))
 
 		// Extract token from "Bearer <token>"
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		tokenString := cookie.Value
+
+		// Check if the token is blacklisted
+		db := database.Connect()
+		blacklistedTokenRepository := repositories.NewBlacklistedTokenRepository(db)
+		blacklistedToken, err := blacklistedTokenRepository.GetBlacklistedToken(tokenString)
+		if err != nil && err != gorm.ErrRecordNotFound {
+			http.Error(w, "Database connection error", http.StatusInternalServerError)
+			return
+		}
+		if blacklistedToken != nil {
+			http.Error(w, "Token is blacklisted", http.StatusUnauthorized)
+			return
+		}
 
 		// Parse the token
 		claims := &Claims{}
