@@ -185,10 +185,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Name:     "token",
 		Value:    token,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
-		Path:     "/",
+		Secure:   false,        // Set to true in production with HTTPS
 		MaxAge:   24 * 60 * 60, // 1 hour
-		SameSite: http.SameSiteNoneMode,
+		Path:     "/",
+		SameSite: http.SameSiteStrictMode,
 	}
 
 	// Set the cookie in the response

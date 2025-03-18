@@ -37,7 +37,7 @@ function Login() {
         password,
       });
       console.log(res);
-  /*     navigate("/"); */
+      navigate("/");
     } catch (error) {
       console.log(error);
     }
