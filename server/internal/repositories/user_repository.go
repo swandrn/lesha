@@ -21,3 +21,13 @@ func (repo *BlacklistedTokenRepository) GetBlacklistedToken(token string) (*enti
 	}
 	return &blacklistedToken, nil
 }
+func (repo *BlacklistedTokenRepository) GetAllBlacklistedTokens() ([]entity.BlacklistedToken, error) {
+	var blacklistedTokens []entity.BlacklistedToken
+	if err := repo.DB.Find(&blacklistedTokens).Error; err != nil {
+		return nil, err
+	}
+	return blacklistedTokens, nil
+}
+func (repo *BlacklistedTokenRepository) CreateBlacklistedToken(token string) error {
+	return repo.DB.Create(&entity.BlacklistedToken{Token: token}).Error
+}

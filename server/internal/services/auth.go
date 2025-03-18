@@ -82,6 +82,9 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		db := database.Connect()
 		blacklistedTokenRepository := repositories.NewBlacklistedTokenRepository(db)
 		blacklistedToken, err := blacklistedTokenRepository.GetBlacklistedToken(tokenString)
+		allBlacklistedTokens, err := blacklistedTokenRepository.GetAllBlacklistedTokens()
+		log.Printf("Token from request: '%s'", tokenString)
+		log.Printf("Token from DB: '%s'", allBlacklistedTokens[0].Token)
 		if err != nil && err != gorm.ErrRecordNotFound {
 			http.Error(w, "Database connection error", http.StatusInternalServerError)
 			return
@@ -156,4 +159,19 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 // ProtectedHandler is an example of a secured endpoint
 func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome! You have access to this protected route.")
+}
+
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+	db := database.Connect()
+	blacklistedTokenRepository := repositories.NewBlacklistedTokenRepository(db)
+	err = blacklistedTokenRepository.CreateBlacklistedToken(cookie.Value)
+	if err != nil {
+		http.Error(w, "Failed to create blacklisted token", http.StatusInternalServerError)
+		return
+	}
 }
