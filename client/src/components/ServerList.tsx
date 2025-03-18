@@ -14,14 +14,21 @@ const sampleServers: Server[] = [
   { id: 5, name: "Movies", icon: "🎬" },
 ];
 
-export function ServerList(): React.JSX.Element {
+interface ServerListProps {
+  onServerSelect: (serverId: number) => void;
+}
+
+export function ServerList(
+  { onServerSelect }: ServerListProps,
+): React.JSX.Element {
   return (
-    <div className="w-20 md:w-24 h-screen bg-blue-700 text-white flex flex-col items-center p-2 shadow-lg">
+    <div className="w-20 h-screen bg-blue-900 text-white flex flex-col items-center p-2 shadow-lg">
       {sampleServers.map((server) => (
         <div
           key={server.id}
-          className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center text-2xl font-bold bg-blue-500 hover:bg-blue-400 transition rounded-full cursor-pointer my-2"
+          className="w-14 h-14 flex items-center justify-center text-2xl font-bold bg-blue-500 hover:bg-blue-400 transition rounded-full cursor-pointer my-3"
           title={server.name}
+          onClick={() => onServerSelect(server.id)}
         >
           {server.icon}
         </div>

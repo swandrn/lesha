@@ -6,10 +6,25 @@ interface Message {
   sender: "user" | "bot";
 }
 
-export function Chat(): React.JSX.Element {
+interface ChatProps {
+  channelId: number;
+  onToggleChannels: () => void;
+}
+
+export function Chat(
+  { channelId, onToggleChannels }: ChatProps,
+): React.JSX.Element {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMessages([]); // Clear chat when switching channels
+  }, [channelId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = (event?: React.FormEvent) => {
     event?.preventDefault();
@@ -24,28 +39,30 @@ export function Chat(): React.JSX.Element {
     setMessages([...messages, newMessage]);
     setInput("");
 
-    // Simulate bot response
     setTimeout(() => {
       const botMessage: Message = {
         id: messages.length + 2,
-        text: "This is a bot reply!",
+        text: "Bot reply in channel " + channelId,
         sender: "bot",
       };
       setMessages((prevMessages) => [...prevMessages, botMessage]);
     }, 1000);
   };
 
-  // Auto-scroll to the latest message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   return (
-    <div className="flex flex-col h-screen w-screen bg-gray-100">
-      <div className="p-4 bg-blue-600 text-white text-lg font-semibold shadow-md">
-        Chat
+    <div className="flex flex-col h-screen w-full bg-gray-100">
+      {/* Chat Header */}
+      <div className="p-4 bg-blue-600 text-white text-lg font-semibold shadow-md flex justify-between items-center">
+        <button
+          onClick={onToggleChannels}
+          className="bg-blue-400 px-3 py-1 rounded-md hover:bg-blue-500 transition"
+        >
+          ☰ Channels
+        </button>
+        <span>Channel {channelId}</span>
       </div>
 
+      {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {messages.map((msg) => (
           <div
@@ -62,6 +79,7 @@ export function Chat(): React.JSX.Element {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Chat Input */}
       <form
         onSubmit={sendMessage}
         className="flex p-4 bg-white border-t border-gray-300"
