@@ -9,6 +9,7 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string>("");
   const navigate = useNavigate();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -20,20 +21,26 @@ function Login() {
 
     console.log("Email:", email);
     console.log("Mot de passe:", password);
-    await axios
-      .post("http://localhost:8080/login", {
+
+    try {
+      axios.interceptors.request.use(
+        (config) => {
+          config.withCredentials = true;
+          return config;
+        },
+        (error) => {
+          return Promise.reject(error);
+        }
+      );
+      const res = await axios.post("http://localhost:8080/login", {
         email,
         password,
-      })
-      .then((res) => {
-        console.log(res);
-        localStorage.setItem("token", res.data.token);
-       /*  navigate("/"); */
-      })
-      .catch((err) => {
-          console.log(err);
-        setError(err.response.data.message);
       });
+      console.log(res);
+      navigate("/");
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const togglePasswordVisibility = () => {

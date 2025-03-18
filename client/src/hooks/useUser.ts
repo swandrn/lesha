@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 
 export const useUser = () => {
   const [user, setUser] = useState<any | null>(null);
@@ -8,14 +7,23 @@ export const useUser = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:8080/get-user', {
+        const response = await fetch('http://localhost:8080/get-user', {
+          method: 'GET',
+          credentials: 'include',
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            'Content-Type': 'application/json',
+          },
         });
-        setUser(response.data);
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        console.log(data);
+        setUser(data);
       } catch (error) {
+        console.error('Error fetching user data:', error);
         setUser(null);
       } finally {
         setLoading(false);
