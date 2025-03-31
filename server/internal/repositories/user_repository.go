@@ -27,6 +27,22 @@ func (repo *UserRepository) CreateUser(user *entity.User) error {
 	return repo.DB.Create(user).Error
 }
 
+func (repo *UserRepository) GetAllUsers() ([]entity.User, error) {
+	var users []entity.User
+	if err := repo.DB.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (repo *UserRepository) UpdateUser(user *entity.User) error {
+	return repo.DB.Save(user).Error
+}
+
+func (repo *UserRepository) DeleteUser(user *entity.User) error {
+	return repo.DB.Delete(user).Error
+}
+
 func (repo *UserRepository) GetUserById(id string) (*entity.User, error) {
 	var user entity.User
 	if err := repo.DB.Where("id = ?", id).First(&user).Error; err != nil {
