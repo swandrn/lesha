@@ -2,13 +2,15 @@ import { useState } from "react";
 import { ServerList } from "./components/ServerList";
 import { ChannelList } from "./components/ChannelList";
 import { Chat } from "./components/Chat";
-import EditAccount from "./components/EditAccount"; // N'oublie pas d'importer EditAccount
-import { FriendList } from "./components/FriendList"; // Assure-toi que FriendList est bien importé
+import EditAccount from "./components/EditAccount";
+import { FriendList } from "./components/FriendList";
+import CreateServer from "./components/CreateServer";
 
 function App() {
   const [selectedServer, setSelectedServer] = useState<number | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
   const [isChannelListVisible, setIsChannelListVisible] = useState(true);
+  const [isCreatingServer, setIsCreatingServer] = useState(false); // État pour la création de serveur
   const [servers, setServers] = useState([
     { id: 0, name: "Edit Account", icon: "🛠️" },
     { id: 1, name: "Friends", icon: "👫" },
@@ -17,46 +19,52 @@ function App() {
     { id: 5, name: "Movies", icon: "🎬" },
   ]);
 
+  // Fonction pour afficher CreateServer lorsque le bouton dédié est cliqué
+  const handleCreateNewServer = () => {
+    setIsCreatingServer(true); // On active le mode création
+    setSelectedServer(null); // On réinitialise la sélection du serveur
+    setSelectedChannel(null); // On réinitialise la sélection du canal
+  };
+
+  // Fonction pour sélectionner un serveur et afficher ses channels
   const handleServerSelect = (serverId: number) => {
     setSelectedServer(serverId);
     setSelectedChannel(null); // Reset selected channel
     setIsChannelListVisible(true); // Ensure channel list is visible
+    setIsCreatingServer(false); // On désactive le mode création quand un serveur est sélectionné
   };
 
+  // Fonction pour sélectionner un canal
   const handleChannelSelect = (channelId: number) => {
     setSelectedChannel(channelId);
     setIsChannelListVisible(false); // Hide channel list when a channel is selected
   };
 
-  // Fonction pour créer un nouveau serveur
-  const handleCreateNewServer = () => {
-    const newServer = {
-      id: servers.length,  // Assurez-vous que l'id est unique
-      name: `New Server ${servers.length + 1}`,
-      icon: "✨", // Vous pouvez ajouter un icône personnalisé
-    };
-    setServers((prevServers) => [...prevServers, newServer]);
-  };
-
   return (
     <div className="flex h-screen w-screen bg-gray-900">
-      <ServerList onServerSelect={handleServerSelect} onCreateNewServer={handleCreateNewServer} />
+      <ServerList
+        onServerSelect={handleServerSelect}
+        onCreateNewServer={handleCreateNewServer}
+      />
 
-      {/* Afficher EditAccount si le serveur sélectionné est 0 */}
+      {/* Affichage de EditAccount uniquement pour le serveur 0 */}
       {selectedServer === 0 && <EditAccount />}
 
-      {/* Afficher FriendList si le serveur sélectionné est 1 */}
+      {/* Affichage de FriendList uniquement pour le serveur 1 */}
       {selectedServer === 1 && <FriendList />}
 
-      {/* Show ChannelList only if a server is selected AND it's visible */}
-      {selectedServer && selectedServer !== 0 && selectedServer !== 1 && isChannelListVisible && (
+      {/* Affichage du composant CreateServer uniquement lorsque le mode création est activé */}
+      {isCreatingServer && <CreateServer />}
+
+      {/* Si un serveur est sélectionné et qu'il n'est pas en mode création, afficher les channels */}
+      {selectedServer !== null && !isCreatingServer && selectedServer !== 0 && selectedServer !== 1 && isChannelListVisible && (
         <ChannelList
           serverId={selectedServer}
           onChannelSelect={handleChannelSelect}
         />
       )}
 
-      {/* Show Chat only if a channel is selected */}
+      {/* Si un canal est sélectionné, afficher le chat */}
       {selectedChannel && (
         <Chat
           channelId={selectedChannel}

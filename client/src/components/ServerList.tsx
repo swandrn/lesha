@@ -16,12 +16,10 @@ const sampleServers: Server[] = [
 
 interface ServerListProps {
   onServerSelect: (serverId: number) => void;
-  onCreateNewServer: () => void;  // Ajoutez une fonction pour gérer la création d'un serveur
+  onCreateNewServer: () => void;
 }
 
-export function ServerList(
-  { onServerSelect, onCreateNewServer }: ServerListProps,
-): React.JSX.Element {
+export function ServerList({ onServerSelect, onCreateNewServer }: ServerListProps): React.JSX.Element {
   return (
     <div className="w-20 h-screen bg-blue-900 text-white flex flex-col items-center p-2 shadow-lg">
       {sampleServers.map((server, index) => (
@@ -41,7 +39,7 @@ export function ServerList(
         </React.Fragment>
       ))}
 
-      {/* Ajouter une option pour créer un nouveau serveur */}
+      {/* Bouton pour créer un nouveau serveur */}
       <div
         className="w-14 h-14 flex items-center justify-center text-2xl font-bold bg-green-500 hover:bg-green-400 transition rounded-full cursor-pointer my-3"
         title="Create New Server"

@@ -5,6 +5,7 @@ interface Channel {
   name: string;
 }
 
+// Liste des canaux par serveur
 const sampleChannels: Record<number, Channel[]> = {
   1: [{ id: 101, name: "general" }, { id: 102, name: "random" }],
   2: [{ id: 201, name: "game-talk" }, { id: 202, name: "game-news" }],
@@ -18,23 +19,26 @@ interface ChannelListProps {
   onChannelSelect: (channelId: number) => void;
 }
 
-export function ChannelList(
-  { serverId, onChannelSelect }: ChannelListProps,
-): React.JSX.Element {
+export function ChannelList({ serverId, onChannelSelect }: ChannelListProps): React.JSX.Element {
+  // Récupération des canaux pour le serveur sélectionné
   const channels = sampleChannels[serverId] || [];
 
   return (
     <div className="w-40 md:w-56 h-screen bg-gray-800 text-white flex flex-col p-4 shadow-md">
       <h2 className="text-lg font-semibold mb-4">Channels</h2>
-      {channels.map((channel) => (
-        <div
-          key={channel.id}
-          className="p-2 text-sm rounded-md hover:bg-gray-700 cursor-pointer"
-          onClick={() => onChannelSelect(channel.id)}
-        >
-          # {channel.name}
-        </div>
-      ))}
+      {channels.length === 0 ? (
+        <div className="text-center text-gray-500">Aucun canal disponible pour ce serveur.</div>
+      ) : (
+        channels.map((channel) => (
+          <div
+            key={channel.id}
+            className="p-2 text-sm rounded-md hover:bg-gray-700 cursor-pointer"
+            onClick={() => onChannelSelect(channel.id)}
+          >
+            # {channel.name}
+          </div>
+        ))
+      )}
     </div>
   );
 }
