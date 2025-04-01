@@ -236,7 +236,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("GetUser", r)
+
 	cookie, err := r.Cookie("token")
 	if err != nil {
 		http.Error(w, "Missing token", http.StatusUnauthorized)

@@ -1,8 +1,6 @@
 package services
 
 import (
-	"fmt"
-
 	"gorm.io/gorm"
 	"lesha.com/server/internal/entity"
 	"lesha.com/server/internal/repositories"
@@ -27,7 +25,7 @@ func (service *MessageService) GetMessage(messageId string) (*entity.Message, er
 }
 
 func (service *MessageService) GetChannelMessages(channelId string) ([]entity.Message, error) {
-	fmt.Println("channelId in service", channelId)
+
 	messageRepository := repositories.NewMessageRepository(service.DB)
 	return messageRepository.GetChannelMessages(channelId)
 }
