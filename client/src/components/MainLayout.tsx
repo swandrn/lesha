@@ -5,6 +5,7 @@ import { FriendList } from "./FriendList";
 import CreateServer from "./CreateServer";
 import { Sidebar } from "./Sidebar";
 import { useState } from "react";
+import { useUser } from "../hooks/useUser";
 
 export interface Server {
     id: number;
@@ -40,6 +41,7 @@ export const MainLayout = ({
     onServerCreated,
 }: Props) => {
     const [selectedView, setSelectedView] = useState<"edit" | "friends" | null>(null);
+    const { user } = useUser()
 
     return (
         <div className="flex h-screen w-screen bg-gray-900">
@@ -68,6 +70,8 @@ export const MainLayout = ({
                         {isChannelListVisible && (
                             <ChannelList
                                 serverId={selectedServer}
+                                serverOwnerId={servers.find((s) => s.id === selectedServer)?.userId ?? 0}
+                                currentUserId={user?.id ?? 0}
                                 onChannelSelect={onChannelSelect}
                             />
                         )}

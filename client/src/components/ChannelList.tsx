@@ -1,44 +1,120 @@
-import React from "react";
+import { useEffect, useState } from "react";
 
 interface Channel {
   id: number;
   name: string;
+  serverId: number;
+  createdAt: string;
+  updatedAt: string;
 }
-
-// Liste des canaux par serveur
-const sampleChannels: Record<number, Channel[]> = {
-  1: [{ id: 101, name: "general" }, { id: 102, name: "random" }],
-  2: [{ id: 201, name: "game-talk" }, { id: 202, name: "game-news" }],
-  3: [{ id: 301, name: "coding" }, { id: 302, name: "debugging" }],
-  4: [{ id: 401, name: "music-share" }, { id: 402, name: "playlists" }],
-  5: [{ id: 501, name: "movie-reviews" }, { id: 502, name: "watch-party" }],
-};
 
 interface ChannelListProps {
   serverId: number;
+  serverOwnerId: number;
+  currentUserId: number;
   onChannelSelect: (channelId: number) => void;
 }
 
-export function ChannelList({ serverId, onChannelSelect }: ChannelListProps): React.JSX.Element {
-  // Récupération des canaux pour le serveur sélectionné
-  const channels = sampleChannels[serverId] || [];
+export function ChannelList({
+  serverId,
+  serverOwnerId,
+  currentUserId,
+  onChannelSelect,
+}: ChannelListProps) {
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  console.log(currentUserId, serverOwnerId)
+
+  const fetchChannels = () => {
+    setLoading(true);
+    fetch(`http://localhost:8080/servers/${serverId}/channels`, {
+      credentials: "include",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch channels");
+        return res.json();
+      })
+      .then((data) => {
+        setChannels(
+          data.map((channel: any) => ({
+            id: channel.ID,
+            name: channel.Name,
+            serverId: channel.ServerID,
+            createdAt: channel.CreatedAt,
+            updatedAt: channel.UpdatedAt,
+          }))
+        );
+        setError("");
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Erreur lors du chargement des channels.");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchChannels();
+  }, [serverId]);
+
+  const handleCreateChannel = async () => {
+    const name = prompt("Nom du nouveau canal:");
+    if (!name) return;
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("serverID", serverId.toString());
+
+    try {
+      const res = await fetch("http://localhost:8080/channels", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Erreur lors de la création du canal");
+      }
+
+      await fetchChannels();
+    } catch (err) {
+      console.error("Erreur lors de la création du canal:", err);
+      alert("Erreur lors de la création du canal.");
+    }
+  };
 
   return (
-    <div className="w-40 md:w-56 h-screen bg-gray-800 text-white flex flex-col p-4 shadow-md">
-      <h2 className="text-lg font-semibold mb-4">Channels</h2>
-      {channels.length === 0 ? (
-        <div className="text-center text-gray-500">Aucun canal disponible pour ce serveur.</div>
-      ) : (
-        channels.map((channel) => (
-          <div
-            key={channel.id}
-            className="p-2 text-sm rounded-md hover:bg-gray-700 cursor-pointer"
-            onClick={() => onChannelSelect(channel.id)}
+    <div className="p-4 text-white bg-gray-800 w-64 flex flex-col">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Canaux</h2>
+
+        {currentUserId === serverOwnerId && (
+          <button
+            onClick={handleCreateChannel}
+            title="Créer un nouveau canal"
+            className="text-green-400 hover:text-green-300 text-2xl"
           >
-            # {channel.name}
-          </div>
-        ))
-      )}
+            ➕
+          </button>
+        )}
+      </div>
+
+      {loading && <div>Chargement...</div>}
+      {error && <div className="text-red-500">{error}</div>}
+
+      <ul>
+        {channels.map((channel) => (
+          <li
+            key={channel.id}
+            onClick={() => onChannelSelect(channel.id)}
+            className="cursor-pointer hover:bg-gray-700 px-3 py-2 rounded transition"
+          >
+            #{channel.name}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
