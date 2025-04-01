@@ -5,8 +5,19 @@ interface Message {
   ID?: number;
   Content: string;
   UserID: number;
-  ChannelID: number;
-  CreatedAt: string;
+  User: {
+    id: number;
+    name: string;
+    displayName: string;
+  };
+  medias: {
+    id: number;
+    type: string;
+    extension: string;
+    url: string;
+  }[];
+  channelId: number;
+  createdAt: string;
 }
 
 interface ChatProps {
@@ -37,14 +48,17 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
         if (!res.ok) throw new Error("Failed to fetch messages");
 
         const data = await res.json();
+        console.log("received data", data);
 
         setMessages(
           data.map((msg: any) => ({
-            ID: msg.ID,
-            Content: msg.Content,
-            UserID: msg.UserID,
-            ChannelID: msg.ChannelID,
-            CreatedAt: msg.CreatedAt,
+            ID: msg.id,
+            Content: msg.content,
+            UserID: msg.user.id,
+            User: msg.user,
+            medias: msg.medias,
+            channelId: msg.channelId,
+            createdAt: msg.createdAt,
           }))
         );
       } catch (err: any) {
@@ -66,6 +80,7 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
   // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    console.log(messages);
   }, [messages]);
 
   // Connect to WebSocket
@@ -94,10 +109,13 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
         const data = JSON.parse(event.data);
         if (data.type === "MESSAGE" && data.channel_id === channelId) {
           const newMsg: Message = {
+            ID: data.id,
+            User: data.user,
+            medias: data.medias,
             Content: data.content,
-            ChannelID: data.channel_id,
+            channelId: data.channel_id,
             UserID: data.sender,
-            CreatedAt: data.timestamp,
+            createdAt: data.timestamp,
           };
           setMessages((prev) => [...prev, newMsg]);
         }
@@ -166,9 +184,23 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
               : "bg-gray-300 text-black self-start mr-auto"
               }`}
           >
-            {msg.Content}
+            {msg.medias?.length > 0 ? (
+              <div className="flex items-center gap-2">
+                {msg.medias.map((media, index) => (
+                  <img
+                    key={index}
+                    src={"http://localhost:8080/" + media.url}
+                    alt={media.type}
+                    className="w-10 h-10 object-cover rounded-md"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p>{msg.Content}</p>
+            )}
+
             <div className="text-xs text-right mt-1 text-gray-500">
-              {new Date(msg.CreatedAt).toLocaleTimeString()}
+              {new Date(msg.createdAt).toLocaleTimeString()}
             </div>
           </div>
         ))}
@@ -187,6 +219,14 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
           onChange={(e) => setFile(e.target.files?.[0] || null)}
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
         />
+        <button
+          type="button"
+          onClick={() => document.getElementById("fileInput")?.click()}
+          className="ml-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+        >
+          Attach
+        </button>
+
         <input
           type="text"
           value={input}
