@@ -62,8 +62,7 @@ function App() {
           serverId={selectedServer}
           onChannelSelect={handleChannelSelect}
         />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+      )}
 
       {/* Si un canal est sélectionné, afficher le chat */}
       {selectedChannel && (
