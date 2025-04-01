@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"lesha.com/server/internal/entity"
@@ -35,9 +36,15 @@ func (c *ChannelController) GetChannels(w http.ResponseWriter, r *http.Request) 
 // GetChannel returns a specific channel by ID
 func (c *ChannelController) GetChannel(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	channelId := vars["id"]
+	channelIdStr := vars["id"]
 
-	channel, err := c.channelService.GetChannel(channelId)
+	channelId, err := strconv.ParseUint(channelIdStr, 10, 64)
+	if err != nil {
+		http.Error(w, "ID cannot be parsed to int", http.StatusInternalServerError)
+		return
+	}
+
+	channel, err := c.channelService.GetChannel(uint(channelId))
 	if err != nil {
 		http.Error(w, "Channel not found", http.StatusNotFound)
 		return
@@ -69,7 +76,7 @@ func (c *ChannelController) CreateChannel(w http.ResponseWriter, r *http.Request
 // UpdateChannel updates a channel's information
 func (c *ChannelController) UpdateChannel(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	channelId := vars["id"]
+	channelIdStr := vars["id"]
 
 	var updateData entity.Channel
 	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
@@ -77,7 +84,13 @@ func (c *ChannelController) UpdateChannel(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	channel, err := c.channelService.GetChannel(channelId)
+	channelId, err := strconv.ParseUint(channelIdStr, 10, 64)
+	if err != nil {
+		http.Error(w, "ID cannot be parsed to int", http.StatusInternalServerError)
+		return
+	}
+
+	channel, err := c.channelService.GetChannel(uint(channelId))
 	if err != nil {
 		http.Error(w, "Channel not found", http.StatusNotFound)
 		return
@@ -100,9 +113,15 @@ func (c *ChannelController) UpdateChannel(w http.ResponseWriter, r *http.Request
 // DeleteChannel deletes a channel
 func (c *ChannelController) DeleteChannel(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	channelId := vars["id"]
+	channelIdStr := vars["id"]
 
-	channel, err := c.channelService.GetChannel(channelId)
+	channelId, err := strconv.ParseUint(channelIdStr, 10, 64)
+	if err != nil {
+		http.Error(w, "ID cannot be parsed to int", http.StatusInternalServerError)
+		return
+	}
+
+	channel, err := c.channelService.GetChannel(uint(channelId))
 	if err != nil {
 		http.Error(w, "Channel not found", http.StatusNotFound)
 		return
