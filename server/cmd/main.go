@@ -12,6 +12,7 @@ import (
 	"lesha.com/server/internal/database"
 	"lesha.com/server/internal/entity"
 	"lesha.com/server/internal/services"
+	"lesha.com/server/internal/ws"
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 	r.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler)).Methods("GET")
 	r.HandleFunc("/logout", services.LogoutHandler).Methods("GET")
 	r.HandleFunc("/get-user", services.GetUser).Methods("GET")
-	r.HandleFunc("/ws", services.HandleWebSocket()).Methods("GET")
+	r.HandleFunc("/ws", ws.HandleWebSocket).Methods("GET")
 
 	userController := controllers.NewUserController(services.NewUserService(db))
 
@@ -82,7 +83,7 @@ func main() {
 
 	// Setup CORS options
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"}, // your frontend URL
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:5174"}, // your frontend URL
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ServerList } from "./components/ServerList";
 import { ChannelList } from "./components/ChannelList";
 import { Chat } from "./components/Chat";
@@ -48,6 +48,41 @@ function App() {
     "Friends": <FriendList />,
   };
 
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    fetch("http://localhost:8080/servers", {
+      credentials: "include",
+      signal,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load servers");
+        return res.json();
+      })
+      .then((data) => setServers(data))
+      .catch((err) => {
+        if (err.name === "AbortError") {
+          console.log("Fetch aborted");
+          return;
+        }
+        console.error("Error fetching servers:", err);
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  const fetchServers = () => {
+    fetch("http://localhost:8080/servers", {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => setServers(data))
+      .catch((err) => console.error("Error reloading servers:", err));
+  };
+
   return (
     <>
       <Routes>
@@ -63,7 +98,7 @@ function App() {
 
         {selectedServerName && specialViews[selectedServerName]}
 
-        {isCreatingServer && <CreateServer />}
+        {isCreatingServer && <CreateServer onServerCreated={fetchServers} />}
 
         {selectedServer !== null &&
           !isCreatingServer &&
