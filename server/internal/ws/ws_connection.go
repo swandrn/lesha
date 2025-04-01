@@ -1,9 +1,14 @@
 package ws
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -42,7 +47,6 @@ func (c *Client) writePump() {
 		select {
 		case msg, ok := <-c.Send:
 			if !ok {
-				// Channel closed
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -65,7 +69,6 @@ func (c *Client) joinChannel(channelName string) {
 	log.Printf("User %d joined channel %s", c.UserID, channelName)
 }
 
-// Function called when a user upgrades from http to ws
 func HandleWebSocket(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := Upgrade(w, r)
@@ -107,6 +110,8 @@ func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 		Type      string `json:"type"`
 		ChannelID uint   `json:"channel_id"`
 		Content   string `json:"content"`
+		File      string `json:"file"`
+		Filename  string `json:"filename"`
 	}
 
 	if err := json.Unmarshal(raw, &incoming); err != nil {
@@ -117,12 +122,46 @@ func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 	switch incoming.Type {
 	case "MESSAGE":
 		messageService := services.NewMessageService(db)
-
 		message := entity.Message{
 			UserID:    c.UserID,
 			ChannelID: incoming.ChannelID,
 			Content:   incoming.Content,
 			Pinned:    false,
+		}
+
+		if incoming.File != "" && incoming.Filename != "" {
+			parts := strings.SplitN(incoming.File, ",", 2)
+			if len(parts) != 2 {
+				log.Println("Invalid base64 data")
+				return
+			}
+			decoded, err := base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				log.Println("Failed to decode base64:", err)
+				return
+			}
+
+			uploadDir := "uploads/servers"
+			if err := os.MkdirAll(uploadDir, 0755); err != nil {
+				log.Println("Failed to create upload directory:", err)
+				return
+			}
+
+			filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), incoming.Filename)
+			filePath := filepath.Join(uploadDir, filename)
+			file, err := os.Create(filePath)
+			if err != nil {
+				log.Println("Failed to create file:", err)
+				return
+			}
+			defer file.Close()
+
+			if _, err := file.Write(decoded); err != nil {
+				log.Println("Failed to write file:", err)
+				return
+			}
+
+			message.Content = filename
 		}
 
 		if err := messageService.CreateMessage(&message); err != nil {
@@ -154,7 +193,6 @@ func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 			log.Println("Failed to find channel:", err)
 			return
 		}
-
 		c.joinChannel(channel.Name)
 	}
 }
