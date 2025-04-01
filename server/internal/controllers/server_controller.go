@@ -232,11 +232,19 @@ func (c *ServerController) AddUserToServerByEmail(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	serverId := vars["id"]
 
-	var data struct {
+	// Parse JSON from request body
+	var requestData struct {
 		Email string `json:"email"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+
+	err := json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		http.Error(w, "Invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	if requestData.Email == "" {
+		http.Error(w, "Email is required", http.StatusBadRequest)
 		return
 	}
 
@@ -248,7 +256,7 @@ func (c *ServerController) AddUserToServerByEmail(w http.ResponseWriter, r *http
 	}
 
 	// First get the user by email
-	user, err := c.serverService.GetUserByEmail(data.Email)
+	user, err := c.serverService.GetUserByEmail(requestData.Email)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return

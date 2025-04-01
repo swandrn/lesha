@@ -110,6 +110,11 @@ function Login() {
             className="px-6 py-2 text-white bg-blue-700 rounded cursor-pointer hover:bg-blue-400 transition"
           />
         </div>
+      <div className="mt-6 flex justify-center">
+        <button className="px-6 py-2 text-white bg-blue-700 rounded cursor-pointer hover:bg-blue-400 transition" onClick={(e) => { e.preventDefault(); navigate("/register") }}>
+          S'inscrire
+        </button>
+      </div>
       </form>
     </div>
   );

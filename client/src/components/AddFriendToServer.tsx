@@ -5,12 +5,23 @@ function AddFriendToServer({ serverId, onClose }: { serverId: number; onClose: (
   const [error, setError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email) {
       setError("L'email est obligatoire.");
       return;
+    }
+
+    const response = await fetch(`http://localhost:8080/servers/${serverId}/add-user`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+      credentials: "include", // ✅ Include JWT cookie
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || "Erreur lors de la création du serveur");
     }
 
     // Simulate the logic for sending the email and inviting the friend
