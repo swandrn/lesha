@@ -109,15 +109,19 @@ func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 	var incoming struct {
 		Type      string `json:"type"`
 		ChannelID uint   `json:"channel_id"`
+		MessageID uint   `json:"message_id"`
 		Content   string `json:"content"`
 		File      string `json:"file"`
 		Filename  string `json:"filename"`
+		Reaction  string `json:"reaction"`
 	}
 
 	if err := json.Unmarshal(raw, &incoming); err != nil {
 		log.Println("Invalid message:", err)
 		return
 	}
+
+	fmt.Println(incoming)
 
 	switch incoming.Type {
 	case "MESSAGE":
@@ -129,19 +133,25 @@ func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 			Pinned:    false,
 		}
 
+		if err := messageService.CreateMessage(&message); err != nil {
+			log.Println("Failed to save message:", err)
+			return
+		}
+
 		if incoming.File != "" && incoming.Filename != "" {
 			parts := strings.SplitN(incoming.File, ",", 2)
 			if len(parts) != 2 {
 				log.Println("Invalid base64 data")
 				return
 			}
+
 			decoded, err := base64.StdEncoding.DecodeString(parts[1])
 			if err != nil {
 				log.Println("Failed to decode base64:", err)
 				return
 			}
 
-			uploadDir := "uploads/servers"
+			uploadDir := "uploads/messages"
 			if err := os.MkdirAll(uploadDir, 0755); err != nil {
 				log.Println("Failed to create upload directory:", err)
 				return
@@ -149,6 +159,7 @@ func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 
 			filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), incoming.Filename)
 			filePath := filepath.Join(uploadDir, filename)
+
 			file, err := os.Create(filePath)
 			if err != nil {
 				log.Println("Failed to create file:", err)
@@ -161,26 +172,70 @@ func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 				return
 			}
 
-			message.Content = filename
+			var ext string
+			for _, e := range []string{".jpg", ".jpeg", ".png", ".gif", ".mp4", ".webm", ".mp3", ".wav"} {
+				if strings.HasSuffix(strings.ToLower(incoming.Filename), e) {
+					ext = e
+					break
+				}
+			}
+
+			if ext == "" {
+				log.Println("Invalid file extension")
+				return
+			}
+
+			var mediaType string
+			switch ext {
+			case ".jpg", ".jpeg", ".png", ".gif":
+				mediaType = "image"
+			case ".mp4", ".webm":
+				mediaType = "video"
+			case ".mp3", ".wav":
+				mediaType = "audio"
+			default:
+				log.Println("Unsupported file type")
+				return
+			}
+
+			media := entity.Media{
+				MessageID: message.ID,
+				Type:      mediaType,
+				Extension: ext[1:],
+				Url:       filePath,
+			}
+
+			if err := messageService.AddMedia(&media); err != nil {
+				log.Println("Failed to save media:", err)
+				return
+			}
 		}
 
-		if err := messageService.CreateMessage(&message); err != nil {
-			log.Println("Failed to save message:", err)
-			return
+		updatedMessage, err := messageService.GetMessage(fmt.Sprintf("%d", message.ID))
+		if err != nil {
+			log.Println("Failed to get updated message:", err)
 		}
+
+		messageResponse := updatedMessage.ToResponse()
 
 		payload, _ := json.Marshal(struct {
-			Type      string    `json:"type"`
-			ChannelID uint      `json:"channel_id"`
-			SenderID  uint      `json:"sender"`
-			Content   string    `json:"content"`
-			Timestamp time.Time `json:"timestamp"`
+			Type      string                 `json:"type"`
+			ID        uint                   `json:"id"`
+			ChannelID uint                   `json:"channel_id"`
+			SenderID  uint                   `json:"sender"`
+			User      entity.UserResponse    `json:"user"`
+			Content   string                 `json:"content"`
+			Timestamp time.Time              `json:"timestamp"`
+			Medias    []entity.MediaResponse `json:"medias"`
 		}{
 			Type:      "MESSAGE",
-			ChannelID: message.ChannelID,
-			SenderID:  message.UserID,
-			Content:   message.Content,
-			Timestamp: message.CreatedAt,
+			ID:        messageResponse.ID,
+			ChannelID: messageResponse.ChannelID,
+			SenderID:  messageResponse.User.ID,
+			User:      messageResponse.User,
+			Content:   messageResponse.Content,
+			Timestamp: messageResponse.CreatedAt,
+			Medias:    messageResponse.Medias,
 		})
 
 		broadcastToChannel(db, message.ChannelID, payload)
@@ -194,6 +249,63 @@ func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 			return
 		}
 		c.joinChannel(channel.Name)
+
+	case "REACTION":
+		if incoming.MessageID == 0 || incoming.Reaction == "" {
+			log.Println("Invalid reaction data")
+			return
+		}
+
+		messageService := services.NewMessageService(db)
+
+		// Create a new reaction
+		reaction := entity.Reaction{
+			UserID:    c.UserID,
+			MessageID: incoming.MessageID,
+			Emoji:     incoming.Reaction,
+		}
+
+		// Add the reaction to the database
+		if err := messageService.AddReaction(&reaction); err != nil {
+			log.Println("Failed to add reaction:", err)
+			return
+		}
+
+		// Get the updated message with the new reaction
+		messageId := fmt.Sprintf("%d", incoming.MessageID)
+		message, err := messageService.GetMessage(messageId)
+		if err != nil {
+			log.Println("Failed to get updated message:", err)
+			return
+		}
+
+		// Convert to response format
+		messageResponse := message.ToResponse()
+
+		// Broadcast the updated message to all clients in the channel
+		payload, _ := json.Marshal(struct {
+			Type      string                    `json:"type"`
+			ID        uint                      `json:"id"`
+			ChannelID uint                      `json:"channel_id"`
+			SenderID  uint                      `json:"sender"`
+			User      entity.UserResponse       `json:"user"`
+			Content   string                    `json:"content"`
+			Timestamp time.Time                 `json:"timestamp"`
+			Medias    []entity.MediaResponse    `json:"medias"`
+			Reactions []entity.ReactionResponse `json:"reactions"`
+		}{
+			Type:      "MESSAGE_UPDATE",
+			ID:        messageResponse.ID,
+			ChannelID: messageResponse.ChannelID,
+			SenderID:  messageResponse.User.ID,
+			User:      messageResponse.User,
+			Content:   messageResponse.Content,
+			Timestamp: messageResponse.CreatedAt,
+			Medias:    messageResponse.Medias,
+			Reactions: messageResponse.Reactions,
+		})
+
+		broadcastToChannel(db, messageResponse.ChannelID, payload)
 	}
 }
 

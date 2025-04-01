@@ -32,7 +32,7 @@ function Register() {
         console.log("redirecting to login");
         navigate("/login");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.log("error", err.response?.data?.message);
       setError(err.response?.data?.message || "Une erreur est survenue.");
     }
@@ -126,6 +126,12 @@ function Register() {
             value="S'inscrire"
             className="px-6 py-2 text-white bg-blue-700 rounded cursor-pointer hover:bg-blue-400 transition"
           />
+        </div>
+
+        <div className="mt-6 flex justify-center">
+          <button className="px-6 py-2 text-white bg-blue-700 rounded cursor-pointer hover:bg-blue-400 transition" onClick={(e) => { e.preventDefault(); navigate("/login") }}>
+            Se connecter
+          </button>
         </div>
       </form>
     </div>
