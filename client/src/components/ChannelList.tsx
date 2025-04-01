@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import AddFriendToServer from "./AddFriendToServer"; // Import the popup/modal component
 
 interface Channel {
   id: number;
@@ -24,6 +25,7 @@ export function ChannelList({
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false); // State to track modal visibility
 
   const fetchChannels = () => {
     setLoading(true);
@@ -84,6 +86,16 @@ export function ChannelList({
     }
   };
 
+  // Open the invite modal
+  const handleInviteClick = () => {
+    setIsInviteModalOpen(true);
+  };
+
+  // Close the invite modal
+  const handleCloseModal = () => {
+    setIsInviteModalOpen(false);
+  };
+
   return (
     <div className="p-4 text-white bg-gray-800 w-64 flex flex-col">
       <div className="flex justify-between items-center mb-4">
@@ -100,6 +112,13 @@ export function ChannelList({
         )}
       </div>
 
+      <button
+        onClick={handleInviteClick}
+        className="text-blue-400 hover:text-blue-300 mb-4"
+      >
+        Inviter un ami au serveur
+      </button>
+
       {loading && <div>Chargement...</div>}
       {error && <div className="text-red-500">{error}</div>}
 
@@ -114,6 +133,11 @@ export function ChannelList({
           </li>
         ))}
       </ul>
+
+      {/* Modal for inviting friend */}
+      {isInviteModalOpen && (
+        <AddFriendToServer serverId={serverId} onClose={handleCloseModal} />
+      )}
     </div>
   );
 }
