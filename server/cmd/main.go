@@ -37,7 +37,7 @@ func main() {
 	r.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler)).Methods("GET")
 	r.HandleFunc("/logout", services.LogoutHandler).Methods("GET")
 	r.HandleFunc("/get-user", services.GetUser).Methods("GET")
-	r.HandleFunc("/ws", ws.HandleWebSocket).Methods("GET")
+	r.HandleFunc("/ws", ws.HandleWebSocket(db)).Methods("GET")
 
 	userController := controllers.NewUserController(services.NewUserService(db))
 
