@@ -50,7 +50,7 @@ export function ChatWindow(): React.JSX.Element {
 
       {/* Afficher FriendList si le serveur sélectionné est 1 */}
       {selectedServer === 1 && <FriendList />}
-
+      
       {/* Show ChannelList only if a server is selected AND it's visible */}
       {selectedServer && selectedServer !== 0 && selectedServer !== 1 &&
         isChannelListVisible && (
