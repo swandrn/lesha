@@ -4,13 +4,13 @@ function CreateServer() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
-  const [userId, setUserId] = useState<number | string>(""); // ID de l'utilisateur
   const [error, setError] = useState<string>("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !description || !image || !userId) {
+    if (!name || !description || !image) {
       setError("Tous les champs sont obligatoires.");
       return;
     }
@@ -20,7 +20,6 @@ function CreateServer() {
     formData.append("name", name);
     formData.append("description", description);
     formData.append("image", image);
-    formData.append("user_id", userId.toString());
 
     // Vous pouvez remplacer cette ligne par une requête pour envoyer ces données à votre API
     console.log("FormData pour création du serveur :", formData);
@@ -29,8 +28,18 @@ function CreateServer() {
     setName("");
     setDescription("");
     setImage(null);
-    setUserId("");
+    setImagePreview(null);
     setError(""); // Réinitialiser les erreurs
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files ? e.target.files[0] : null;
+    if (file) {
+      setImage(file);
+      // Créer un aperçu de l'image
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    }
   };
 
   return (
@@ -93,32 +102,22 @@ function CreateServer() {
           <input
             id="image"
             type="file"
-            onChange={(e) => {
-              const file = e.target.files ? e.target.files[0] : null;
-              setImage(file);
-            }}
+            onChange={handleImageChange}
             required
             className="w-full mt-1 text-white bg-gray-800 border border-gray-600 rounded focus:outline-none focus:border-blue-400"
           />
         </div>
 
-        <div className="mt-4">
-          <label
-            htmlFor="user_id"
-            className="block text-sm font-bold text-gray-300"
-          >
-            ID de l'utilisateur
-          </label>
-          <input
-            id="user_id"
-            type="number"
-            placeholder="ID de l'utilisateur"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            required
-            className="w-full px-3 py-2 mt-1 text-white bg-gray-800 border border-gray-600 rounded focus:outline-none focus:border-blue-400"
-          />
-        </div>
+        {/* Affichage de l'aperçu de l'image si une image est sélectionnée */}
+        {imagePreview && (
+          <div className="mt-4 flex justify-center">
+            <img
+              src={imagePreview}
+              alt="Aperçu"
+              className="w-48 h-48 object-cover rounded-md"
+            />
+          </div>
+        )}
 
         <div className="mt-6 flex justify-center">
           <input
