@@ -51,7 +51,9 @@ func (repo *ServerRepository) DeleteServer(server *entity.Server) error {
 }
 func (repo *ServerRepository) GetServerMembers(serverId string) ([]entity.User, error) {
 	var members []entity.User
-	err := repo.DB.Where("server_id = ?", serverId).Find(&members).Error
+	err := repo.DB.Joins("JOIN user_servers ON users.id = user_servers.user_id").
+		Where("user_servers.server_id = ?", serverId).
+		Find(&members).Error
 	if err != nil {
 		return nil, err
 	}

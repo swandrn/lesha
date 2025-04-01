@@ -58,7 +58,7 @@ func main() {
 	r.HandleFunc("/messages/{id}/reactions/{reactionId}", messageController.RemoveReaction).Methods("DELETE")
 
 	// Initialize channel controller
-	channelController := controllers.NewChannelController(services.NewChannelService(db))
+	channelController := controllers.NewChannelController(services.NewChannelService(db), services.NewServerService(db))
 
 	// Channel routes
 	r.HandleFunc("/channels", channelController.GetChannels).Methods("GET")
