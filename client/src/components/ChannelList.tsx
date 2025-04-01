@@ -24,7 +24,6 @@ export function ChannelList({
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  console.log(currentUserId, serverOwnerId)
 
   const fetchChannels = () => {
     setLoading(true);

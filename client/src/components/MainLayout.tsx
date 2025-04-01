@@ -1,11 +1,11 @@
+import { useState } from "react";
+import { useUser } from "../hooks/useUser";
+import { Sidebar } from "./Sidebar";
 import { ChannelList } from "./ChannelList";
 import { Chat } from "./Chat";
 import EditAccount from "./EditAccount";
 import { FriendList } from "./FriendList";
 import CreateServer from "./CreateServer";
-import { Sidebar } from "./Sidebar";
-import { useState } from "react";
-import { useUser } from "../hooks/useUser";
 
 export interface Server {
     id: number;
@@ -41,7 +41,11 @@ export const MainLayout = ({
     onServerCreated,
 }: Props) => {
     const [selectedView, setSelectedView] = useState<"edit" | "friends" | null>(null);
-    const { user } = useUser()
+    const { user } = useUser();
+    const currentUserId = user?.id ?? 0;
+
+    const currentServer = servers.find((s) => s.id === selectedServer);
+    const serverOwnerId = currentServer?.userId ?? 0;
 
     return (
         <div className="flex h-screen w-screen bg-gray-900">
@@ -58,31 +62,33 @@ export const MainLayout = ({
                 }}
             />
 
+            {/* Special views */}
             {selectedView === "edit" && <EditAccount />}
             {selectedView === "friends" && <FriendList />}
 
+            {/* Create server view */}
             {isCreatingServer && <CreateServer onServerCreated={onServerCreated} />}
 
-            {selectedServer !== null &&
-                !isCreatingServer &&
-                !selectedView && (
-                    <>
-                        {isChannelListVisible && (
-                            <ChannelList
-                                serverId={selectedServer}
-                                serverOwnerId={servers.find((s) => s.id === selectedServer)?.userId ?? 0}
-                                currentUserId={user?.id ?? 0}
-                                onChannelSelect={onChannelSelect}
-                            />
-                        )}
-                        {selectedChannel && (
-                            <Chat
-                                channelId={selectedChannel}
-                                onToggleChannels={() => onChannelSelect(null)}
-                            />
-                        )}
-                    </>
-                )}
+            {/* Normal server view */}
+            {selectedServer !== null && !isCreatingServer && !selectedView && (
+                <>
+                    {isChannelListVisible && (
+                        <ChannelList
+                            serverId={selectedServer}
+                            serverOwnerId={serverOwnerId}
+                            currentUserId={currentUserId}
+                            onChannelSelect={onChannelSelect}
+                        />
+                    )}
+                    {selectedChannel && (
+                        <Chat
+                            channelId={selectedChannel}
+                            currentUserId={currentUserId}
+                            onToggleChannels={() => onChannelSelect(null)}
+                        />
+                    )}
+                </>
+            )}
         </div>
     );
 };
