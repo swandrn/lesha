@@ -31,6 +31,10 @@ func main() {
 	fmt.Println("Migration successful!")
 
 	r := mux.NewRouter()
+
+	// Serve static files from uploads directory
+	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
+
 	// Auth routes
 	r.HandleFunc("/login", services.LoginHandler).Methods("POST")
 	r.HandleFunc("/register", services.RegisterHandler).Methods("POST")

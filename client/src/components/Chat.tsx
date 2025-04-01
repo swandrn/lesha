@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useUser } from "../hooks/useUser";
 
 interface Message {
   ID?: number;
@@ -17,6 +18,7 @@ interface ChatProps {
 export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps): React.JSX.Element {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -143,10 +145,7 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
     <div className="flex flex-col h-screen w-full bg-gray-100">
       {/* Header */}
       <div className="p-4 bg-blue-600 text-white text-lg font-semibold shadow-md flex justify-between items-center">
-        <button
-          onClick={onToggleChannels}
-          className="bg-blue-400 px-3 py-1 rounded-md hover:bg-blue-500 transition"
-        >
+        <button onClick={onToggleChannels} className="bg-blue-400 px-3 py-1 rounded-md hover:bg-blue-500 transition">
           ☰ Channels
         </button>
         <span>Channel {channelId}</span>

@@ -148,7 +148,7 @@ func (c *ServerController) CreateServer(w http.ResponseWriter, r *http.Request) 
 
 	// Create default text channel
 	channel := entity.Channel{
-		Name:     "text",
+		Name:     "General",
 		ServerID: server.ID,
 	}
 	if err := c.channelService.CreateChannel(&channel); err != nil {
