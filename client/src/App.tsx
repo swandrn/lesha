@@ -21,14 +21,14 @@ function App() {
     setSelectedChannel(null);
   };
 
-  const handleServerSelect = (serverId: number) => {
+  const handleServerSelect = (serverId: number | null) => {
     setSelectedServer(serverId);
     setSelectedChannel(null);
     setIsChannelListVisible(true);
     setIsCreatingServer(false);
   };
 
-  const handleChannelSelect = (channelId: number = 1) => {
+  const handleChannelSelect = (channelId: number | null) => {
     setSelectedChannel(channelId);
     setIsChannelListVisible(false);
   };
