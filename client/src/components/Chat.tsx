@@ -16,6 +16,11 @@ interface Message {
     extension: string;
     url: string;
   }[];
+  reactions?: {
+    id: number;
+    emoji: string;
+    userId: number;
+  }[];
   channelId: number;
   createdAt: string;
 }
@@ -27,11 +32,13 @@ interface ChatProps {
 
 export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Element {
   const { user } = useUser();
+  const [showReactions, setShowReactions] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const availableReactions = ["👍", "👎", "👏", "🤣", "👀","👌"];
 
   // Load message history
   useEffect(() => {
@@ -57,6 +64,7 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
             UserID: msg.user.id,
             User: msg.user,
             medias: msg.medias,
+            reactions: msg.reactions,
             channelId: msg.channelId,
             createdAt: msg.createdAt,
           }))
@@ -112,6 +120,7 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
             ID: data.id,
             User: data.user,
             medias: data.medias,
+            reactions: data.reactions,
             Content: data.content,
             channelId: data.channel_id,
             UserID: data.sender,
@@ -164,6 +173,21 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
     }
   };
 
+  const handleReactionClick = (reaction: string, messageId: number) => {
+    
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: "REACTION",
+          message_id: messageId,
+          reaction: reaction,
+        })
+      );
+    } else {
+      console.warn("WebSocket not ready");
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-full bg-gray-100">
       {/* Header */}
@@ -183,6 +207,8 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
               ? "bg-blue-500 text-white self-end ml-auto"
               : "bg-gray-300 text-black self-start mr-auto"
               }`}
+            onMouseEnter={() => setShowReactions(msg.ID ?? 0)}
+            onMouseLeave={() => setShowReactions(0)}
           >
             {msg.medias?.length > 0 ? (
               <div className="flex items-center gap-2">
@@ -198,10 +224,27 @@ export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Elem
             ) : (
               <p>{msg.Content}</p>
             )}
-
+           
             <div className="text-xs text-right mt-1 text-gray-500">
               {new Date(msg.createdAt).toLocaleTimeString()}
             </div>
+            {msg.reactions && msg.reactions.length > 0 && (
+              <div className="text-md text-right mt-1 text-gray-500">
+                {msg.reactions.map((reaction) => (
+                  <span key={reaction.emoji}>{reaction.emoji}</span>
+                ))}
+              </div>
+            )}
+
+            {showReactions === msg.ID && (
+              <div className="flex items-center gap-2">
+              {availableReactions.map((reaction) => (
+                <button key={reaction} onClick={() => handleReactionClick(reaction, msg.ID ?? 0)} className="text-lg text-gray-500 hover:text-gray-700 cursor-pointer hover:scale-110 transition-all duration-300">
+                  {reaction}
+                </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />
