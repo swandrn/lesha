@@ -35,6 +35,7 @@ func main() {
 	r.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler)).Methods("GET")
 	r.HandleFunc("/logout", services.LogoutHandler).Methods("GET")
 	r.HandleFunc("/get-user", services.GetUser).Methods("GET")
+	r.HandleFunc("/ws", services.HandleWebSocket()).Methods("GET")
 
 	// Setup CORS options
 	corsHandler := cors.New(cors.Options{

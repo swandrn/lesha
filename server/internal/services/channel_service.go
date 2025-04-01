@@ -19,7 +19,7 @@ func (service *ChannelService) CreateChannel(channel *entity.Channel) error {
 	return channelRepository.CreateChannel(channel)
 }
 
-func (service *ChannelService) GetChannel(channelId string) (*entity.Channel, error) {
+func (service *ChannelService) GetChannel(channelId uint) (*entity.Channel, error) {
 	channelRepository := repositories.NewChannelRepository(service.DB)
 	return channelRepository.GetChannel(channelId)
 }

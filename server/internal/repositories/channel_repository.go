@@ -17,7 +17,7 @@ func NewChannelRepository(db *gorm.DB) *ChannelRepository {
 func (repo *ChannelRepository) CreateChannel(channel *entity.Channel) error {
 	return repo.DB.Create(channel).Error
 }
-func (repo *ChannelRepository) GetChannel(channelId string) (*entity.Channel, error) {
+func (repo *ChannelRepository) GetChannel(channelId uint) (*entity.Channel, error) {
 	var channel entity.Channel
 	err := repo.DB.Where("id = ?", channelId).First(&channel).Error
 	if err != nil {
