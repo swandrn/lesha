@@ -19,9 +19,6 @@ function Register() {
     }
 
     setError("");
-    console.log("Nom:", name);
-    console.log("Email:", email);
-    console.log("Mot de passe:", password);
 
     try {
       const res = await axios.post("http://localhost:8080/register", {
