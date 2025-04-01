@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import axios from "axios";
 
 interface Server {
   id: number;
@@ -33,9 +34,7 @@ export function ServerList({ onServerSelect, onCreateNewServer }: ServerListProp
           </div>
 
           {/* Ajouter une barre sous le 2ème serveur (index 1) */}
-          {index === 1 && (
-            <div className="w-12 h-1 bg-gray-500 my-3" />
-          )}
+          {index === 1 && <div className="w-12 h-1 bg-gray-500 my-3" />}
         </React.Fragment>
       ))}
 

@@ -10,27 +10,69 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"lesha.com/server/internal/database"
+	"lesha.com/server/internal/entity"
 	"lesha.com/server/internal/repositories"
 )
-
-// User structure (simulating a database)
-type User struct {
-	Id       string
-	Username string
-	Password string
-}
-
-// Dummy user data
-var users = map[string]string{
-	"admin": "password123",
-}
 
 // JWT Claims structure
 type Claims struct {
 	UserId string `json:"userId"`
 	jwt.RegisteredClaims
+}
+
+func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	var user entity.User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Invalid request format",
+		})
+		return
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Failed to hash password",
+		})
+		return
+	}
+	user.Password = string(hashedPassword)
+
+	log.Printf("User: %+v", user)
+	userRepository := repositories.NewUserRepository(database.Connect())
+	existingUser, err := userRepository.GetUserByEmail(user.Email)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Failed to check existing user",
+		})
+		return
+	}
+	if existingUser != nil {
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "User with this email already exists",
+		})
+		return
+	}
+	err = userRepository.CreateUser(&user)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Failed to create user",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "User created successfully",
+	})
 }
 
 // GenerateJWT creates a JWT token for authenticated users
@@ -114,7 +156,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // LoginHandler handles user authentication and returns a JWT
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
-	var creds User
+	var creds entity.User
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
 		http.Error(w, "Invalid request format", http.StatusBadRequest)
@@ -122,17 +164,31 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	fmt.Printf("creds: %+v\n", creds)
-
-	if storedPassword, ok := users[creds.Username]; !ok || storedPassword != creds.Password {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+	userRepository := repositories.NewUserRepository(database.Connect())
+	user, err := userRepository.GetUserByEmail(creds.Email)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "No user found with this email",
+		})
 		return
 	}
 
-	// Generate JWT
-	token, err := GenerateJWT(creds.Username)
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(creds.Password))
 	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Invalid credentials",
+		})
+		return
+	}
+	// Generate JWT
+	token, err := GenerateJWT(fmt.Sprint(user.ID))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Failed to generate token",
+		})
 		return
 	}
 
@@ -141,9 +197,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Name:     "token",
 		Value:    token,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   false,        // Set to true in production with HTTPS
+		MaxAge:   24 * 60 * 60, // 1 hour
 		Path:     "/",
-		MaxAge:   3600, // 1 hour
+		SameSite: http.SameSiteStrictMode,
 	}
 
 	// Set the cookie in the response
@@ -174,4 +231,48 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create blacklisted token", http.StatusInternalServerError)
 		return
 	}
+}
+
+func GetUser(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("GetUser", r)
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+	tokenString := cookie.Value
+	user, err := ExtractUserFromToken(tokenString)
+	if err != nil {
+		http.Error(w, "Failed to get user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "User is connected",
+		"user": map[string]interface{}{
+			"id":    user.ID,
+			"email": user.Email,
+			"name":  user.Name,
+		},
+	})
+
+}
+
+func ExtractUserFromToken(tokenString string) (*entity.User, error) {
+	db := database.Connect()
+	jwtSecret := []byte(os.Getenv("JWT_SECRET"))
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	if err != nil || !token.Valid {
+		return nil, err
+	}
+	userRepository := repositories.NewUserRepository(db)
+	user, err := userRepository.GetUserById(claims.UserId)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

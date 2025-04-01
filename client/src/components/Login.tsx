@@ -2,8 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-function Register() {
-  const [name, setName] = useState("");
+function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -12,32 +11,34 @@ function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    if (!name || !email || !password) {
+    if (!email || !password) {
       setError("Tous les champs sont obligatoires.");
       return;
     }
 
-    setError("");
-    console.log("Nom:", name);
     console.log("Email:", email);
     console.log("Mot de passe:", password);
 
     try {
-      const res = await axios.post("http://localhost:8080/register", {
-        name,
+      axios.interceptors.request.use(
+        (config) => {
+          config.withCredentials = true;
+          return config;
+        },
+        (error) => {
+          return Promise.reject(error);
+        },
+      );
+      const res = await axios.post("http://localhost:8080/login", {
         email,
         password,
       });
-
-      console.log("response", res);
-      if (res.status === 200) {
-        console.log("redirecting to login");
-        navigate("/login");
-      }
-    } catch (err) {
-      console.log("error", err.response?.data?.message);
-      setError(err.response?.data?.message || "Une erreur est survenue.");
+      console.log(res);
+      navigate("/");
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -49,34 +50,16 @@ function Register() {
     <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md p-6 bg-black border-4 border-blue-400 rounded-lg shadow-md max-h-[80vh] overflow-y-auto"
+        className="w-full max-w-md p-6 bg-black border-4 border-blue-400 rounded-lg shadow-md"
       >
         <div className="text-center">
-          <h2 className="text-xl font-bold">Créer un compte</h2>
+          <h2 className="text-xl font-bold">Authentification</h2>
           <hr className="w-1/2 mx-auto mt-2 border-blue-400" />
         </div>
 
         {error && (
           <div className="mt-4 text-center text-red-500 text-sm">{error}</div>
         )}
-
-        <div className="mt-4">
-          <label
-            htmlFor="username"
-            className="block text-sm font-bold text-gray-300"
-          >
-            Nom
-          </label>
-          <input
-            id="username"
-            type="text"
-            placeholder="Nom"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full px-3 py-2 mt-1 text-white bg-gray-800 border border-gray-600 rounded focus:outline-none focus:border-blue-400"
-          />
-        </div>
 
         <div className="mt-4">
           <label
@@ -88,7 +71,7 @@ function Register() {
           <input
             id="email"
             type="email"
-            placeholder="exemple@mail.com"
+            placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -107,7 +90,7 @@ function Register() {
             <input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="***"
+              placeholder="********"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -126,7 +109,7 @@ function Register() {
         <div className="mt-6 flex justify-center">
           <input
             type="submit"
-            value="S'inscrire"
+            value="Se connecter"
             className="px-6 py-2 text-white bg-blue-700 rounded cursor-pointer hover:bg-blue-400 transition"
           />
         </div>
@@ -135,4 +118,4 @@ function Register() {
   );
 }
 
-export default Register;
+export default Login;
