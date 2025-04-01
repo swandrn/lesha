@@ -12,7 +12,7 @@ interface Channel {
 interface ChannelListProps {
   serverId: number;
   serverOwnerId: number;
-  currentUserId: number;
+ 
   onChannelSelect: (channelId: number) => void;
 }
 

@@ -11,11 +11,11 @@ interface Message {
 
 interface ChatProps {
   channelId: number;
-  currentUserId: number;
   onToggleChannels: () => void;
 }
 
-export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps): React.JSX.Element {
+export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Element {
+  const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -125,7 +125,10 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
   // Send message via WebSocket only
   const sendMessage = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() && !file) return;
+    if (file && !input.trim()) {
+      setInput(file.name);
+    }
 
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(
@@ -133,9 +136,11 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
           type: "MESSAGE",
           channel_id: channelId,
           content: input,
+          file: file,
         })
       );
       setInput("");
+      setFile(null);
     } else {
       console.warn("WebSocket not ready");
     }
@@ -156,9 +161,9 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`px-4 py-2 rounded-lg w-fit max-w-[75%] break-words ${msg.UserID === currentUserId
-                ? "bg-blue-500 text-white self-end ml-auto"
-                : "bg-gray-300 text-black self-start mr-auto"
+            className={`px-4 py-2 rounded-lg w-fit max-w-[75%] break-words ${msg.UserID === user?.user.id
+              ? "bg-blue-500 text-white self-end ml-auto"
+              : "bg-gray-300 text-black self-start mr-auto"
               }`}
           >
             {msg.Content}
@@ -175,6 +180,13 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
         onSubmit={sendMessage}
         className="flex p-4 bg-white border-t border-gray-300"
       >
+        <input
+          type="file"
+          id="fileInput"
+          style={{ display: "none" }}
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+        />
         <input
           type="text"
           value={input}
