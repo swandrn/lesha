@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
-import { ServerList } from "./components/ServerList";
-import { ChannelList } from "./components/ChannelList";
-import { Chat } from "./components/Chat";
-import EditAccount from "./components/EditAccount";
-import { FriendList } from "./components/FriendList";
-import CreateServer from "./components/CreateServer";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import { Route, Routes } from "react-router-dom";
+import { ProtectedRoute } from "./components/middlewares/ProtectedRoute";
+import { MainLayout, Server } from "./components/MainLayout";
 
 function App() {
   const [selectedServer, setSelectedServer] = useState<number | null>(null);
@@ -15,13 +11,9 @@ function App() {
   const [isChannelListVisible, setIsChannelListVisible] = useState(true);
   const [isCreatingServer, setIsCreatingServer] = useState(false);
 
-  const [servers, setServers] = useState([
-    { id: 0, name: "Edit Account", icon: "🛠️" },
-    { id: 1, name: "Friends", icon: "👫" },
-    { id: 3, name: "Programming", icon: "💻" },
-    { id: 4, name: "Music", icon: "🎵" },
-    { id: 5, name: "Movies", icon: "🎬" },
-  ]);
+  const [servers, setServers] = useState<Server[]>([]);
+
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   const handleCreateNewServer = () => {
     setIsCreatingServer(true);
@@ -29,26 +21,21 @@ function App() {
     setSelectedChannel(null);
   };
 
-  const handleServerSelect = (serverId: number) => {
+  const handleServerSelect = (serverId: number | null) => {
     setSelectedServer(serverId);
     setSelectedChannel(null);
     setIsChannelListVisible(true);
     setIsCreatingServer(false);
   };
 
-  const handleChannelSelect = (channelId: number) => {
+  const handleChannelSelect = (channelId: number | null) => {
     setSelectedChannel(channelId);
     setIsChannelListVisible(false);
   };
 
-  const selectedServerName = servers.find(s => s.id === selectedServer)?.name;
-
-  const specialViews: Record<string, React.JSX.Element> = {
-    "Edit Account": <EditAccount />,
-    "Friends": <FriendList />,
-  };
-
   useEffect(() => {
+    if (!isLoggedIn) return;
+
     const controller = new AbortController();
     const signal = controller.signal;
 
@@ -60,7 +47,19 @@ function App() {
         if (!res.ok) throw new Error("Failed to load servers");
         return res.json();
       })
-      .then((data) => setServers(data))
+      .then((data) =>
+        setServers(
+          data.map((server: any) => ({
+            id: server.ID,
+            name: server.Name,
+            image: server.Image,
+            description: server.Description,
+            userId: server.UserID,
+            createdAt: server.CreatedAt,
+            updatedAt: server.UpdatedAt,
+          }))
+        )
+      )
       .catch((err) => {
         if (err.name === "AbortError") {
           console.log("Fetch aborted");
@@ -72,53 +71,44 @@ function App() {
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [isLoggedIn]);
 
   const fetchServers = () => {
     fetch("http://localhost:8080/servers", {
       credentials: "include",
     })
       .then((res) => res.json())
-      .then((data) => setServers(data))
+      .then((data) => {
+        setServers(data);
+        setIsLoggedIn(true);
+      })
       .catch((err) => console.error("Error reloading servers:", err));
   };
 
   return (
     <>
       <Routes>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <MainLayout
+                servers={servers}
+                selectedServer={selectedServer}
+                selectedChannel={selectedChannel}
+                isCreatingServer={isCreatingServer}
+                isChannelListVisible={isChannelListVisible}
+                onServerSelect={handleServerSelect}
+                onCreateNewServer={handleCreateNewServer}
+                onChannelSelect={handleChannelSelect}
+                onServerCreated={fetchServers}
+              />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>
-
-      <div className="flex h-screen w-screen bg-gray-900">
-        <ServerList
-          onServerSelect={handleServerSelect}
-          onCreateNewServer={handleCreateNewServer}
-        />
-
-        {selectedServerName && specialViews[selectedServerName]}
-
-        {isCreatingServer && <CreateServer onServerCreated={fetchServers} />}
-
-        {selectedServer !== null &&
-          !isCreatingServer &&
-          !specialViews[selectedServerName!] && (
-            <>
-              {isChannelListVisible && (
-                <ChannelList
-                  serverId={selectedServer}
-                  onChannelSelect={handleChannelSelect}
-                />
-              )}
-              {selectedChannel && (
-                <Chat
-                  channelId={selectedChannel}
-                  onToggleChannels={() => setIsChannelListVisible(true)}
-                />
-              )}
-            </>
-          )}
-      </div>
     </>
   );
 }
