@@ -37,7 +37,7 @@ func main() {
 	r.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler)).Methods("GET")
 	r.HandleFunc("/logout", services.LogoutHandler).Methods("GET")
 	r.HandleFunc("/get-user", services.GetUser).Methods("GET")
-	r.HandleFunc("/ws", ws.HandleWebSocket).Methods("GET")
+	r.HandleFunc("/ws", ws.HandleWebSocket(db)).Methods("GET")
 
 	userController := controllers.NewUserController(services.NewUserService(db))
 
@@ -55,9 +55,11 @@ func main() {
 	r.HandleFunc("/channels/{channelID}/messages", services.AuthMiddleware(messageController.GetChannelMessages)).Methods("GET")
 	r.HandleFunc("/messages", services.AuthMiddleware(messageController.CreateMessage)).Methods("POST")
 	r.HandleFunc("/messages/{id}", services.AuthMiddleware(messageController.GetMessage)).Methods("GET")
-	r.HandleFunc("/messages/{id}/pin", services.AuthMiddleware(messageController.PinMessage)).Methods("POST")
+	r.HandleFunc("/messages/{id}/pin", services.AuthMiddleware(messageController.PinMessage)).Methods("GET")
+	r.HandleFunc("/messages/{id}/unpin", services.AuthMiddleware(messageController.UnpinMessage)).Methods("GET")
 	r.HandleFunc("/messages/{id}/reactions", services.AuthMiddleware(messageController.AddReaction)).Methods("POST")
 	r.HandleFunc("/messages/{id}/reactions/{reactionId}", services.AuthMiddleware(messageController.RemoveReaction)).Methods("DELETE")
+	r.HandleFunc("/messages/{id}/media", services.AuthMiddleware(messageController.AddMedia)).Methods("POST")
 
 	// Initialize channel controller
 	channelController := controllers.NewChannelController(services.NewChannelService(db), services.NewServerService(db))

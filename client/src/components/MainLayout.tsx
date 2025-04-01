@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { useUser } from "../hooks/useUser";
+import { Sidebar } from "./Sidebar";
 import { ChannelList } from "./ChannelList";
 import { Chat } from "./Chat";
 import EditAccount from "./EditAccount";
@@ -43,7 +46,12 @@ export const MainLayout = ({
     onServerCreated,
     selectedView,
 }: Props) => {
+    const [selectedView, setSelectedView] = useState<"edit" | "friends" | null>(null);
     const { user } = useUser();
+    const currentUserId = user?.id ?? 0;
+
+    const currentServer = servers.find((s) => s.id === selectedServer);
+    const serverOwnerId = currentServer?.userId ?? 0;
 
     return (
         <div className="flex h-screen w-screen bg-gray-900">
@@ -60,11 +68,11 @@ export const MainLayout = ({
                 }}
             />
 
-            {/* Show the EditAccount or FriendList component based on selectedView */}
+            {/* Special views */}
             {selectedView === "edit" && <EditAccount />}
             {selectedView === "friends" && <FriendList />}
 
-            {/* Show CreateServer when in creation mode */}
+            {/* Create server view */}
             {isCreatingServer && <CreateServer onServerCreated={onServerCreated} />}
 
             {/* Only show channels when a server is selected and we're not in edit/friends view */}
