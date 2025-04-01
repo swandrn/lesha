@@ -53,3 +53,13 @@ func (service *ServerService) GetServerChannels(serverId string) ([]entity.Chann
 	serverRepository := repositories.NewServerRepository(service.DB)
 	return serverRepository.GetServerChannels(serverId)
 }
+
+func (service *ServerService) AddUserToServer(serverID uint, userID uint) error {
+	serverRepository := repositories.NewServerRepository(service.DB)
+	return serverRepository.AddUserToServer(serverID, userID)
+}
+
+func (service *ServerService) GetUserByEmail(email string) (*entity.User, error) {
+	userRepository := repositories.NewUserRepository(service.DB)
+	return userRepository.GetUserByEmail(email)
+}

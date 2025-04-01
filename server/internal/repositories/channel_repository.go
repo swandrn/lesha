@@ -39,3 +39,6 @@ func (repo *ChannelRepository) UpdateChannel(channel *entity.Channel) error {
 func (repo *ChannelRepository) DeleteChannel(channel *entity.Channel) error {
 	return repo.DB.Delete(channel).Error
 }
+func (repo *ChannelRepository) AddUserToChannel(channelID uint, userID uint) error {
+	return repo.DB.Exec("INSERT INTO user_channels (channel_id, user_id) VALUES (?, ?)", channelID, userID).Error
+}

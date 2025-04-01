@@ -68,7 +68,7 @@ func main() {
 	r.HandleFunc("/channels/{id}", channelController.DeleteChannel).Methods("DELETE")
 
 	// Initialize server controller
-	serverController := controllers.NewServerController(services.NewServerService(db))
+	serverController := controllers.NewServerController(services.NewServerService(db), services.NewChannelService(db))
 
 	// Server routes
 	r.HandleFunc("/servers", serverController.GetServers).Methods("GET")
