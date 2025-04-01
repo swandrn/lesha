@@ -241,7 +241,7 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenString := cookie.Value
-	user, err := extractUserFromToken(tokenString)
+	user, err := ExtractUserFromToken(tokenString)
 	if err != nil {
 		http.Error(w, "Failed to get user", http.StatusInternalServerError)
 		return
@@ -259,7 +259,7 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func extractUserFromToken(tokenString string) (*entity.User, error) {
+func ExtractUserFromToken(tokenString string) (*entity.User, error) {
 	db := database.Connect()
 	jwtSecret := []byte(os.Getenv("JWT_SECRET"))
 	claims := &Claims{}

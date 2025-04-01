@@ -38,3 +38,8 @@ func (service *ChannelService) DeleteChannel(channel *entity.Channel) error {
 	channelRepository := repositories.NewChannelRepository(service.DB)
 	return channelRepository.DeleteChannel(channel)
 }
+
+func (service *ChannelService) AddUserToChannel(channelID uint, userID uint) error {
+	channelRepository := repositories.NewChannelRepository(service.DB)
+	return channelRepository.AddUserToChannel(channelID, userID)
+}

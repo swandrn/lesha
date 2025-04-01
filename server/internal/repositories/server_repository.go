@@ -33,6 +33,16 @@ func (repo *ServerRepository) GetServers() ([]entity.Server, error) {
 	}
 	return servers, nil
 }
+func (repo *ServerRepository) GetUserServers(userID uint) ([]entity.Server, error) {
+	var servers []entity.Server
+	err := repo.DB.Joins("JOIN user_servers ON servers.id = user_servers.server_id").
+		Where("user_servers.user_id = ?", userID).
+		Find(&servers).Error
+	if err != nil {
+		return nil, err
+	}
+	return servers, nil
+}
 func (repo *ServerRepository) UpdateServer(server *entity.Server) error {
 	return repo.DB.Save(server).Error
 }
@@ -54,4 +64,12 @@ func (repo *ServerRepository) GetServerChannels(serverId string) ([]entity.Chann
 		return nil, err
 	}
 	return channels, nil
+}
+func (repo *ServerRepository) AddUserToServer(serverID uint, userID uint) error {
+	// Using the many-to-many relationship through user_servers table
+	return repo.DB.Exec("INSERT INTO user_servers (user_id, server_id) VALUES (?, ?)", userID, serverID).Error
+}
+
+func (repo *ServerRepository) CreateChannel(channel *entity.Channel) error {
+	return repo.DB.Create(channel).Error
 }
