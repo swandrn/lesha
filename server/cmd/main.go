@@ -12,6 +12,7 @@ import (
 	"lesha.com/server/internal/database"
 	"lesha.com/server/internal/entity"
 	"lesha.com/server/internal/services"
+	"lesha.com/server/internal/ws"
 )
 
 func main() {
@@ -36,52 +37,53 @@ func main() {
 	r.HandleFunc("/protected", services.AuthMiddleware(services.ProtectedHandler)).Methods("GET")
 	r.HandleFunc("/logout", services.LogoutHandler).Methods("GET")
 	r.HandleFunc("/get-user", services.GetUser).Methods("GET")
-	r.HandleFunc("/ws", services.HandleWebSocket()).Methods("GET")
+	r.HandleFunc("/ws", ws.HandleWebSocket).Methods("GET")
 
 	userController := controllers.NewUserController(services.NewUserService(db))
 
 	// User routes
-	r.HandleFunc("/users", userController.GetUsers).Methods("GET")
-	r.HandleFunc("/users/{id}", userController.GetUser).Methods("GET")
-	r.HandleFunc("/users/{id}", userController.UpdateUser).Methods("PUT")
-	r.HandleFunc("/users/{id}", userController.DeleteUser).Methods("DELETE")
-	r.HandleFunc("/users/{id}/friends", userController.GetUserFriends).Methods("GET")
+	r.HandleFunc("/users", services.AuthMiddleware(userController.GetUsers)).Methods("GET")
+	r.HandleFunc("/users/{id}", services.AuthMiddleware(userController.GetUser)).Methods("GET")
+	r.HandleFunc("/users/{id}", services.AuthMiddleware(userController.UpdateUser)).Methods("PUT")
+	r.HandleFunc("/users/{id}", services.AuthMiddleware(userController.DeleteUser)).Methods("DELETE")
+	r.HandleFunc("/users/{id}/friends", services.AuthMiddleware(userController.GetUserFriends)).Methods("GET")
 
 	// Initialize message controller
 	messageController := controllers.NewMessageController(services.NewMessageService(db))
 
 	// Message routes
-	r.HandleFunc("/channels/{channelId}/messages", messageController.GetChannelMessages).Methods("GET")
-	r.HandleFunc("/messages", messageController.CreateMessage).Methods("POST")
-	r.HandleFunc("/messages/{id}", messageController.GetMessage).Methods("GET")
-	r.HandleFunc("/messages/{id}/pin", messageController.PinMessage).Methods("POST")
-	r.HandleFunc("/messages/{id}/reactions", messageController.AddReaction).Methods("POST")
-	r.HandleFunc("/messages/{id}/reactions/{reactionId}", messageController.RemoveReaction).Methods("DELETE")
+	r.HandleFunc("/channels/{channelID}/messages", services.AuthMiddleware(messageController.GetChannelMessages)).Methods("GET")
+	r.HandleFunc("/messages", services.AuthMiddleware(messageController.CreateMessage)).Methods("POST")
+	r.HandleFunc("/messages/{id}", services.AuthMiddleware(messageController.GetMessage)).Methods("GET")
+	r.HandleFunc("/messages/{id}/pin", services.AuthMiddleware(messageController.PinMessage)).Methods("POST")
+	r.HandleFunc("/messages/{id}/reactions", services.AuthMiddleware(messageController.AddReaction)).Methods("POST")
+	r.HandleFunc("/messages/{id}/reactions/{reactionId}", services.AuthMiddleware(messageController.RemoveReaction)).Methods("DELETE")
 
 	// Initialize channel controller
 	channelController := controllers.NewChannelController(services.NewChannelService(db), services.NewServerService(db))
 
 	// Channel routes
-	r.HandleFunc("/channels", channelController.GetChannels).Methods("GET")
-	r.HandleFunc("/channels", channelController.CreateChannel).Methods("POST")
-	r.HandleFunc("/channels/{id}", channelController.GetChannel).Methods("GET")
-	r.HandleFunc("/channels/{id}", channelController.UpdateChannel).Methods("PUT")
-	r.HandleFunc("/channels/{id}", channelController.DeleteChannel).Methods("DELETE")
+	r.HandleFunc("/channels", services.AuthMiddleware(channelController.GetChannels)).Methods("GET")
+	r.HandleFunc("/channels", services.AuthMiddleware(channelController.CreateChannel)).Methods("POST")
+	r.HandleFunc("/channels/{id}", services.AuthMiddleware(channelController.GetChannel)).Methods("GET")
+	r.HandleFunc("/channels/{id}", services.AuthMiddleware(channelController.UpdateChannel)).Methods("PUT")
+	r.HandleFunc("/channels/{id}", services.AuthMiddleware(channelController.DeleteChannel)).Methods("DELETE")
+	r.HandleFunc("/servers/{id}/channels", services.AuthMiddleware(channelController.GetServerChannels)).Methods("GET")
 
 	// Initialize server controller
 	serverController := controllers.NewServerController(services.NewServerService(db), services.NewChannelService(db))
 
 	// Server routes
-	r.HandleFunc("/servers", serverController.GetServers).Methods("GET")
-
-	r.HandleFunc("/servers", serverController.CreateServer).Methods("POST")
-	r.HandleFunc("/servers/{id}", serverController.GetServer).Methods("GET")
-	r.HandleFunc("/servers/{id}", serverController.UpdateServer).Methods("PUT")
-	r.HandleFunc("/servers/{id}", serverController.DeleteServer).Methods("DELETE")
+	r.HandleFunc("/servers", services.AuthMiddleware(serverController.GetUserServers)).Methods("GET")
+	r.HandleFunc("/servers", services.AuthMiddleware(serverController.CreateServer)).Methods("POST")
+	r.HandleFunc("/servers/{id}", services.AuthMiddleware(serverController.GetServer)).Methods("GET")
+	r.HandleFunc("/servers/{id}", services.AuthMiddleware(serverController.UpdateServer)).Methods("PUT")
+	r.HandleFunc("/servers/{id}", services.AuthMiddleware(serverController.DeleteServer)).Methods("DELETE")
+	r.HandleFunc("/servers/{id}/add-user", services.AuthMiddleware(serverController.AddUserToServerByEmail)).Methods("POST")
 
 	// Setup CORS options
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"}, // your frontend URL
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:5174"}, // your frontend URL
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,

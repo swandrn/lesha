@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ServerList } from "./components/ServerList";
 import { ChannelList } from "./components/ChannelList";
 import { Chat } from "./components/Chat";
 import EditAccount from "./components/EditAccount";
 import { FriendList } from "./components/FriendList";
 import CreateServer from "./components/CreateServer";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import { Route, Routes } from "react-router-dom";
 
 function App() {
   const [selectedServer, setSelectedServer] = useState<number | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
   const [isChannelListVisible, setIsChannelListVisible] = useState(true);
-  const [isCreatingServer, setIsCreatingServer] = useState(false); // État pour la création de serveur
+  const [isCreatingServer, setIsCreatingServer] = useState(false);
+
   const [servers, setServers] = useState([
     { id: 0, name: "Edit Account", icon: "🛠️" },
     { id: 1, name: "Friends", icon: "👫" },
@@ -19,60 +23,103 @@ function App() {
     { id: 5, name: "Movies", icon: "🎬" },
   ]);
 
-  // Fonction pour afficher CreateServer lorsque le bouton dédié est cliqué
   const handleCreateNewServer = () => {
-    setIsCreatingServer(true); // On active le mode création
-    setSelectedServer(null); // On réinitialise la sélection du serveur
-    setSelectedChannel(null); // On réinitialise la sélection du canal
+    setIsCreatingServer(true);
+    setSelectedServer(null);
+    setSelectedChannel(null);
   };
 
-  // Fonction pour sélectionner un serveur et afficher ses channels
   const handleServerSelect = (serverId: number) => {
     setSelectedServer(serverId);
-    setSelectedChannel(null); // Reset selected channel
-    setIsChannelListVisible(true); // Ensure channel list is visible
-    setIsCreatingServer(false); // On désactive le mode création quand un serveur est sélectionné
+    setSelectedChannel(null);
+    setIsChannelListVisible(true);
+    setIsCreatingServer(false);
   };
 
-  // Fonction pour sélectionner un canal
   const handleChannelSelect = (channelId: number) => {
     setSelectedChannel(channelId);
-    setIsChannelListVisible(false); // Hide channel list when a channel is selected
+    setIsChannelListVisible(false);
+  };
+
+  const selectedServerName = servers.find(s => s.id === selectedServer)?.name;
+
+  const specialViews: Record<string, React.JSX.Element> = {
+    "Edit Account": <EditAccount />,
+    "Friends": <FriendList />,
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    fetch("http://localhost:8080/servers", {
+      credentials: "include",
+      signal,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load servers");
+        return res.json();
+      })
+      .then((data) => setServers(data))
+      .catch((err) => {
+        if (err.name === "AbortError") {
+          console.log("Fetch aborted");
+          return;
+        }
+        console.error("Error fetching servers:", err);
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  const fetchServers = () => {
+    fetch("http://localhost:8080/servers", {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => setServers(data))
+      .catch((err) => console.error("Error reloading servers:", err));
   };
 
   return (
-    <div className="flex h-screen w-screen bg-gray-900">
-      <ServerList
-        onServerSelect={handleServerSelect}
-        onCreateNewServer={handleCreateNewServer}
-      />
-
-      {/* Affichage de EditAccount uniquement pour le serveur 0 */}
-      {selectedServer === 0 && <EditAccount />}
-
-      {/* Affichage de FriendList uniquement pour le serveur 1 */}
-      {selectedServer === 1 && <FriendList />}
-
-      {/* Affichage du composant CreateServer uniquement lorsque le mode création est activé */}
-      {isCreatingServer && <CreateServer />}
-
-      {/* Si un serveur est sélectionné et qu'il n'est pas en mode création, afficher les channels */}
-      {selectedServer !== null && !isCreatingServer && selectedServer !== 0 && selectedServer !== 1 && isChannelListVisible && (
-        <ChannelList
-          serverId={selectedServer}
-          onChannelSelect={handleChannelSelect}
-        />
+    <>
+      <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+      </Routes>
 
-      {/* Si un canal est sélectionné, afficher le chat */}
-      {selectedChannel && (
-        <Chat
-          channelId={selectedChannel}
-          onToggleChannels={() => setIsChannelListVisible(true)}
+      <div className="flex h-screen w-screen bg-gray-900">
+        <ServerList
+          onServerSelect={handleServerSelect}
+          onCreateNewServer={handleCreateNewServer}
         />
-      )}
-    </div>
+
+        {selectedServerName && specialViews[selectedServerName]}
+
+        {isCreatingServer && <CreateServer onServerCreated={fetchServers} />}
+
+        {selectedServer !== null &&
+          !isCreatingServer &&
+          !specialViews[selectedServerName!] && (
+            <>
+              {isChannelListVisible && (
+                <ChannelList
+                  serverId={selectedServer}
+                  onChannelSelect={handleChannelSelect}
+                />
+              )}
+              {selectedChannel && (
+                <Chat
+                  channelId={selectedChannel}
+                  onToggleChannels={() => setIsChannelListVisible(true)}
+                />
+              )}
+            </>
+          )}
+      </div>
+    </>
   );
 }
 

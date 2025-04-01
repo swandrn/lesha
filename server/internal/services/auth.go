@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -105,8 +106,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get token from the Authorization header
 		cookie, err := r.Cookie("token")
-
-		if cookie == nil {
+		if err != nil {
 			http.Error(w, "Missing token", http.StatusUnauthorized)
 			return
 		}
@@ -117,16 +117,13 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		jwtSecret := []byte(os.Getenv("JWT_SECRET"))
 
-		// Extract token from "Bearer <token>"
+		// Extract token from cookie
 		tokenString := cookie.Value
 
 		// Check if the token is blacklisted
 		db := database.Connect()
 		blacklistedTokenRepository := repositories.NewBlacklistedTokenRepository(db)
 		blacklistedToken, err := blacklistedTokenRepository.GetBlacklistedToken(tokenString)
-		allBlacklistedTokens, err := blacklistedTokenRepository.GetAllBlacklistedTokens()
-		log.Printf("Token from request: '%s'", tokenString)
-		log.Printf("Token from DB: '%s'", allBlacklistedTokens[0].Token)
 		if err != nil && err != gorm.ErrRecordNotFound {
 			http.Error(w, "Database connection error", http.StatusInternalServerError)
 			return
@@ -147,6 +144,11 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
+
+		// Add user ID to request context
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, "userId", claims.UserId)
+		r = r.WithContext(ctx)
 
 		// Proceed to the next handler
 		next.ServeHTTP(w, r)
@@ -234,7 +236,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("GetUser", r)
+
 	cookie, err := r.Cookie("token")
 	if err != nil {
 		http.Error(w, "Missing token", http.StatusUnauthorized)

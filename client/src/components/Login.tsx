@@ -18,9 +18,6 @@ function Login() {
       return;
     }
 
-    console.log("Email:", email);
-    console.log("Mot de passe:", password);
-
     try {
       axios.interceptors.request.use(
         (config) => {

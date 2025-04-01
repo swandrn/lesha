@@ -30,6 +30,7 @@ func (repo *MessageRepository) GetMessage(messageId string) (*entity.Message, er
 }
 func (repo *MessageRepository) GetChannelMessages(channelId string) ([]entity.Message, error) {
 	var messages []entity.Message
+
 	err := repo.DB.Where("channel_id = ?", channelId).Preload("Medias").Preload("Reactions").Preload("User").Find(&messages).Error
 	return messages, err
 }
