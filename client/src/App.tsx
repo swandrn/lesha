@@ -8,19 +8,21 @@ import { MainLayout, Server } from "./components/MainLayout";
 function App() {
   const [selectedServer, setSelectedServer] = useState<number | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
+  const [selectedView, setSelectedView] = useState<"edit" | "friends" | null>(null);
   const [isChannelListVisible, setIsChannelListVisible] = useState(true);
   const [isCreatingServer, setIsCreatingServer] = useState(false);
-
   const [servers, setServers] = useState<Server[]>([]);
-
   const [isLoggedIn, setIsLoggedIn] = useState(true);
 
+  // Handle creation of new server
   const handleCreateNewServer = () => {
     setIsCreatingServer(true);
     setSelectedServer(null);
     setSelectedChannel(null);
+    setSelectedView(null);  // Reset selectedView when creating a new server
   };
 
+  // Handle server selection
   const handleServerSelect = (serverId: number | null) => {
     setSelectedServer(serverId);
     setSelectedChannel(null);
@@ -28,9 +30,17 @@ function App() {
     setIsCreatingServer(false);
   };
 
+  // Handle channel selection
   const handleChannelSelect = (channelId: number | null) => {
     setSelectedChannel(channelId);
     setIsChannelListVisible(false);
+  };
+
+  // Handle changing views (edit or friends)
+  const handleIsCreatingServerSelect = (view: "edit" | "friends" | null) => {
+    setSelectedView(view);  // Update selectedView when a view is selected
+    setSelectedChannel(null);  // Clear selectedChannel when changing views
+    setIsChannelListVisible(false);  // Hide channel list when navigating to a view
   };
 
   useEffect(() => {
@@ -86,30 +96,30 @@ function App() {
   };
 
   return (
-    <>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <MainLayout
-                servers={servers}
-                selectedServer={selectedServer}
-                selectedChannel={selectedChannel}
-                isCreatingServer={isCreatingServer}
-                isChannelListVisible={isChannelListVisible}
-                onServerSelect={handleServerSelect}
-                onCreateNewServer={handleCreateNewServer}
-                onChannelSelect={handleChannelSelect}
-                onServerCreated={fetchServers}
-              />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
-    </>
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <MainLayout
+              servers={servers}
+              selectedServer={selectedServer}
+              selectedChannel={selectedChannel}
+              selectedView={selectedView}  // Pass selectedView as a prop
+              isCreatingServer={isCreatingServer}
+              isChannelListVisible={isChannelListVisible}
+              onServerSelect={handleServerSelect}
+              onCreateNewServer={handleCreateNewServer}
+              onChannelSelect={handleChannelSelect}
+              onServerCreated={fetchServers}
+              onIsCreatingServer={handleIsCreatingServerSelect}  // Pass the handler to manage view
+            />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+    </Routes>
   );
 }
 
