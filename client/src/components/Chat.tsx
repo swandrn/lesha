@@ -1,57 +1,147 @@
 import React, { useEffect, useRef, useState } from "react";
 
 interface Message {
-  id: number;
-  text: string;
-  sender: "user" | "bot";
+  ID?: number;
+  Content: string;
+  UserID: number;
+  ChannelID: number;
+  CreatedAt: string;
 }
 
 interface ChatProps {
   channelId: number;
+  currentUserId: number;
   onToggleChannels: () => void;
 }
 
-export function Chat(
-  { channelId, onToggleChannels }: ChatProps,
-): React.JSX.Element {
+export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps): React.JSX.Element {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
 
+  // Load message history
   useEffect(() => {
-    setMessages([]); // Clear chat when switching channels
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(`http://localhost:8080/channels/${channelId}/messages`, {
+          credentials: "include",
+          signal,
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch messages");
+
+        const data = await res.json();
+
+        setMessages(
+          data.map((msg: any) => ({
+            ID: msg.ID,
+            Content: msg.Content,
+            UserID: msg.UserID,
+            ChannelID: msg.ChannelID,
+            CreatedAt: msg.CreatedAt,
+          }))
+        );
+      } catch (err: any) {
+        if (err.name === "AbortError") {
+          console.log("Message fetch aborted");
+          return;
+        }
+        console.error("Error fetching messages:", err);
+      }
+    };
+
+    fetchMessages();
+
+    return () => {
+      controller.abort();
+    };
   }, [channelId]);
 
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = (event?: React.FormEvent) => {
-    event?.preventDefault();
-    if (!input.trim()) return;
+  // Connect to WebSocket
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8080/ws");
+    socketRef.current = ws;
 
-    const newMessage: Message = {
-      id: messages.length + 1,
-      text: input,
-      sender: "user",
+    let isActive = true;
+
+    ws.onopen = () => {
+      if (!isActive) return;
+      console.log("WebSocket connected");
+
+      // Join this channel explicitly
+      ws.send(
+        JSON.stringify({
+          type: "JOIN_CHANNEL",
+          channel_id: channelId,
+        })
+      );
     };
 
-    setMessages([...messages, newMessage]);
-    setInput("");
+    ws.onmessage = (event) => {
+      if (!isActive) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "MESSAGE" && data.channel_id === channelId) {
+          const newMsg: Message = {
+            Content: data.content,
+            ChannelID: data.channel_id,
+            UserID: data.sender,
+            CreatedAt: data.timestamp,
+          };
+          setMessages((prev) => [...prev, newMsg]);
+        }
+      } catch (err) {
+        console.error("Invalid WebSocket message:", err);
+      }
+    };
 
-    setTimeout(() => {
-      const botMessage: Message = {
-        id: messages.length + 2,
-        text: "Bot reply in channel " + channelId,
-        sender: "bot",
-      };
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
-    }, 1000);
+    ws.onerror = (err) => {
+      if (!isActive) return;
+      console.error("WebSocket error:", err);
+    };
+
+    ws.onclose = () => {
+      if (!isActive) return;
+      console.log("WebSocket closed");
+    };
+
+    return () => {
+      isActive = false;
+      ws.close();
+    };
+  }, [channelId]);
+
+  // Send message via WebSocket only
+  const sendMessage = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim()) return;
+
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: "MESSAGE",
+          channel_id: channelId,
+          content: input,
+        })
+      );
+      setInput("");
+    } else {
+      console.warn("WebSocket not ready");
+    }
   };
 
   return (
     <div className="flex flex-col h-screen w-full bg-gray-100">
-      {/* Chat Header */}
+      {/* Header */}
       <div className="p-4 bg-blue-600 text-white text-lg font-semibold shadow-md flex justify-between items-center">
         <button
           onClick={onToggleChannels}
@@ -62,24 +152,26 @@ export function Chat(
         <span>Channel {channelId}</span>
       </div>
 
-      {/* Chat Messages */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {messages.map((msg) => (
+        {messages.map((msg, i) => (
           <div
-            key={msg.id}
-            className={`px-4 py-2 rounded-lg w-fit max-w-[75%] break-words ${
-              msg.sender === "user"
+            key={i}
+            className={`px-4 py-2 rounded-lg w-fit max-w-[75%] break-words ${msg.UserID === currentUserId
                 ? "bg-blue-500 text-white self-end ml-auto"
                 : "bg-gray-300 text-black self-start mr-auto"
-            }`}
+              }`}
           >
-            {msg.text}
+            {msg.Content}
+            <div className="text-xs text-right mt-1 text-gray-500">
+              {new Date(msg.CreatedAt).toLocaleTimeString()}
+            </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Chat Input */}
+      {/* Input */}
       <form
         onSubmit={sendMessage}
         className="flex p-4 bg-white border-t border-gray-300"

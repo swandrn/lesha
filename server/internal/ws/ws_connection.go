@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"lesha.com/server/internal/database"
+	"gorm.io/gorm"
 	"lesha.com/server/internal/entity"
 	"lesha.com/server/internal/services"
 )
@@ -21,18 +21,15 @@ type Client struct {
 	Channels map[string]bool
 }
 
-func (c *Client) readPump() {
-	defer func() {
-		c.Conn.Close()
-	}()
-
+func (c *Client) readPump(db *gorm.DB) {
+	defer func() { c.Conn.Close() }()
 	for {
 		_, msg, err := c.Conn.ReadMessage()
 		if err != nil {
 			log.Println("read error:", err)
 			break
 		}
-		c.handleMessage(msg)
+		c.handleMessage(db, msg)
 	}
 }
 
@@ -69,45 +66,43 @@ func (c *Client) joinChannel(channelName string) {
 }
 
 // Function called when a user upgrades from http to ws
-func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := Upgrade(w, r)
-	if err != nil {
-		http.Error(w, "Could not open WebSocket connection", http.StatusBadRequest)
-		return
-	}
-
-	// 🔐 Extract user ID from auth (replace with real logic)
-	userID := uint(1)
-
-	// Create client
-	client := &Client{
-		Conn:     conn,
-		Send:     make(chan []byte, 256),
-		UserID:   userID,
-		Channels: make(map[string]bool),
-	}
-
-	// Auto-join all server channels
-	db := database.Connect()
-	var user entity.User
-	if err := db.Preload("Servers.Channels").First(&user, userID).Error; err != nil {
-		log.Println("failed to fetch user servers/channels:", err)
-		return
-	}
-
-	for _, server := range user.Servers {
-		for _, channel := range server.Channels {
-			client.joinChannel(channel.Name)
+func HandleWebSocket(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		conn, err := Upgrade(w, r)
+		if err != nil {
+			http.Error(w, "Could not open WebSocket connection", http.StatusBadRequest)
+			return
 		}
-	}
 
-	// Start reading/writing
-	go client.writePump()
-	client.readPump()
+		cookie, err := r.Cookie("token")
+		if err != nil {
+			http.Error(w, "Missing token", http.StatusUnauthorized)
+			return
+		}
+		tokenString := cookie.Value
+		user, err := services.ExtractUserFromToken(tokenString)
+		if err != nil {
+			return
+		}
+
+		client := &Client{
+			Conn:     conn,
+			Send:     make(chan []byte, 256),
+			UserID:   user.ID,
+			Channels: make(map[string]bool),
+		}
+
+		if err := db.Preload("Servers.Channels").First(&user, user.ID).Error; err != nil {
+			log.Println("failed to fetch user servers/channels:", err)
+			return
+		}
+
+		go client.writePump()
+		client.readPump(db)
+	}
 }
 
-func (c *Client) handleMessage(raw []byte) {
-	// Receive a message from client
+func (c *Client) handleMessage(db *gorm.DB, raw []byte) {
 	var incoming struct {
 		Type      string `json:"type"`
 		ChannelID uint   `json:"channel_id"`
@@ -121,25 +116,20 @@ func (c *Client) handleMessage(raw []byte) {
 
 	switch incoming.Type {
 	case "MESSAGE":
-		db := database.Connect()
 		messageService := services.NewMessageService(db)
 
 		message := entity.Message{
 			UserID:    c.UserID,
-			Reactions: []entity.Reaction{},
-			Medias:    []entity.Media{},
 			ChannelID: incoming.ChannelID,
 			Content:   incoming.Content,
 			Pinned:    false,
 		}
 
-		// Save to DB
 		if err := messageService.CreateMessage(&message); err != nil {
 			log.Println("Failed to save message:", err)
 			return
 		}
 
-		// Prepare broadcast payload
 		payload, _ := json.Marshal(struct {
 			Type      string    `json:"type"`
 			ChannelID uint      `json:"channel_id"`
@@ -154,12 +144,22 @@ func (c *Client) handleMessage(raw []byte) {
 			Timestamp: message.CreatedAt,
 		})
 
-		broadcastToChannel(message.ChannelID, payload)
+		broadcastToChannel(db, message.ChannelID, payload)
+
+	case "JOIN_CHANNEL":
+		channelService := services.NewChannelService(db)
+
+		channel, err := channelService.GetChannel(incoming.ChannelID)
+		if err != nil {
+			log.Println("Failed to find channel:", err)
+			return
+		}
+
+		c.joinChannel(channel.Name)
 	}
 }
 
-func broadcastToChannel(channelId uint, message []byte) {
-	db := database.Connect()
+func broadcastToChannel(db *gorm.DB, channelId uint, message []byte) {
 	channelService := services.NewChannelService(db)
 	channel, err := channelService.GetChannel(channelId)
 	if err != nil {
