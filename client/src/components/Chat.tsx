@@ -1,22 +1,35 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useUser } from "../hooks/useUser";
 
 interface Message {
   ID?: number;
   Content: string;
   UserID: number;
-  ChannelID: number;
-  CreatedAt: string;
+  User: {
+    id: number;
+    name: string;
+    displayName: string;
+  };
+  medias: {
+    id: number;
+    type: string;
+    extension: string;
+    url: string;
+  }[];
+  channelId: number;
+  createdAt: string;
 }
 
 interface ChatProps {
   channelId: number;
-  currentUserId: number;
   onToggleChannels: () => void;
 }
 
-export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps): React.JSX.Element {
+export function Chat({ channelId, onToggleChannels }: ChatProps): React.JSX.Element {
+  const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -35,14 +48,17 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
         if (!res.ok) throw new Error("Failed to fetch messages");
 
         const data = await res.json();
+        console.log("received data", data);
 
         setMessages(
           data.map((msg: any) => ({
-            ID: msg.ID,
-            Content: msg.Content,
-            UserID: msg.UserID,
-            ChannelID: msg.ChannelID,
-            CreatedAt: msg.CreatedAt,
+            ID: msg.id,
+            Content: msg.content,
+            UserID: msg.user.id,
+            User: msg.user,
+            medias: msg.medias,
+            channelId: msg.channelId,
+            createdAt: msg.createdAt,
           }))
         );
       } catch (err: any) {
@@ -64,6 +80,7 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
   // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    console.log(messages);
   }, [messages]);
 
   // Connect to WebSocket
@@ -92,10 +109,13 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
         const data = JSON.parse(event.data);
         if (data.type === "MESSAGE" && data.channel_id === channelId) {
           const newMsg: Message = {
+            ID: data.id,
+            User: data.user,
+            medias: data.medias,
             Content: data.content,
-            ChannelID: data.channel_id,
+            channelId: data.channel_id,
             UserID: data.sender,
-            CreatedAt: data.timestamp,
+            createdAt: data.timestamp,
           };
           setMessages((prev) => [...prev, newMsg]);
         }
@@ -123,7 +143,10 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
   // Send message via WebSocket only
   const sendMessage = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() && !file) return;
+    if (file && !input.trim()) {
+      setInput(file.name);
+    }
 
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(
@@ -131,9 +154,11 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
           type: "MESSAGE",
           channel_id: channelId,
           content: input,
+          file: file,
         })
       );
       setInput("");
+      setFile(null);
     } else {
       console.warn("WebSocket not ready");
     }
@@ -143,10 +168,7 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
     <div className="flex flex-col h-screen w-full bg-gray-100">
       {/* Header */}
       <div className="p-4 bg-blue-600 text-white text-lg font-semibold shadow-md flex justify-between items-center">
-        <button
-          onClick={onToggleChannels}
-          className="bg-blue-400 px-3 py-1 rounded-md hover:bg-blue-500 transition"
-        >
+        <button onClick={onToggleChannels} className="bg-blue-400 px-3 py-1 rounded-md hover:bg-blue-500 transition">
           ☰ Channels
         </button>
         <span>Channel {channelId}</span>
@@ -157,14 +179,28 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`px-4 py-2 rounded-lg w-fit max-w-[75%] break-words ${msg.UserID === currentUserId
-                ? "bg-blue-500 text-white self-end ml-auto"
-                : "bg-gray-300 text-black self-start mr-auto"
+            className={`px-4 py-2 rounded-lg w-fit max-w-[75%] break-words ${msg.UserID === user?.user.id
+              ? "bg-blue-500 text-white self-end ml-auto"
+              : "bg-gray-300 text-black self-start mr-auto"
               }`}
           >
-            {msg.Content}
+            {msg.medias?.length > 0 ? (
+              <div className="flex items-center gap-2">
+                {msg.medias.map((media, index) => (
+                  <img
+                    key={index}
+                    src={"http://localhost:8080/" + media.url}
+                    alt={media.type}
+                    className="w-10 h-10 object-cover rounded-md"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p>{msg.Content}</p>
+            )}
+
             <div className="text-xs text-right mt-1 text-gray-500">
-              {new Date(msg.CreatedAt).toLocaleTimeString()}
+              {new Date(msg.createdAt).toLocaleTimeString()}
             </div>
           </div>
         ))}
@@ -176,6 +212,21 @@ export function Chat({ channelId, currentUserId, onToggleChannels }: ChatProps):
         onSubmit={sendMessage}
         className="flex p-4 bg-white border-t border-gray-300"
       >
+        <input
+          type="file"
+          id="fileInput"
+          style={{ display: "none" }}
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+        />
+        <button
+          type="button"
+          onClick={() => document.getElementById("fileInput")?.click()}
+          className="ml-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+        >
+          Attach
+        </button>
+
         <input
           type="text"
           value={input}

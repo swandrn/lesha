@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import AddFriendToServer from "./AddFriendToServer"; // Import the popup/modal component
+import { useUser } from "../hooks/useUser";
 
 interface Channel {
   id: number;
@@ -12,16 +13,17 @@ interface Channel {
 interface ChannelListProps {
   serverId: number;
   serverOwnerId: number;
-  currentUserId: number;
+ 
   onChannelSelect: (channelId: number) => void;
 }
 
 export function ChannelList({
   serverId,
   serverOwnerId,
-  currentUserId,
   onChannelSelect,
 }: ChannelListProps) {
+  const { user } = useUser();
+  console.log(user?.user.id);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -101,7 +103,7 @@ export function ChannelList({
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Canaux</h2>
 
-        {currentUserId === serverOwnerId && (
+        {user?.user.id === serverOwnerId && (
           <button
             onClick={handleCreateChannel}
             title="Créer un nouveau canal"

@@ -24,10 +24,19 @@ func (service *MessageService) GetMessage(messageId string) (*entity.Message, er
 	return messageRepository.GetMessage(messageId)
 }
 
-func (service *MessageService) GetChannelMessages(channelId string) ([]entity.Message, error) {
-
+func (service *MessageService) GetChannelMessages(channelId string) ([]entity.MessageResponse, error) {
 	messageRepository := repositories.NewMessageRepository(service.DB)
-	return messageRepository.GetChannelMessages(channelId)
+	messages, err := messageRepository.GetChannelMessages(channelId)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]entity.MessageResponse, len(messages))
+	for i, message := range messages {
+		responses[i] = message.ToResponse()
+	}
+
+	return responses, nil
 }
 
 func (service *MessageService) PinMessage(message *entity.Message) error {

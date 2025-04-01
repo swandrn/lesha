@@ -79,14 +79,13 @@ export const MainLayout = ({
                         <ChannelList
                             serverId={selectedServer}
                             serverOwnerId={serverOwnerId}
-                            currentUserId={currentUserId}
+                      
                             onChannelSelect={onChannelSelect}
                         />
                     )}
                     {selectedChannel && (
                         <Chat
                             channelId={selectedChannel}
-                            currentUserId={currentUserId}
                             onToggleChannels={() => onChannelSelect(null)}
                         />
                     )}
