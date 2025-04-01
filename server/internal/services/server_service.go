@@ -29,6 +29,11 @@ func (service *ServerService) GetServers() ([]entity.Server, error) {
 	return serverRepository.GetServers()
 }
 
+func (service *ServerService) GetUserServers(userID uint) ([]entity.Server, error) {
+	serverRepository := repositories.NewServerRepository(service.DB)
+	return serverRepository.GetUserServers(userID)
+}
+
 func (service *ServerService) UpdateServer(server *entity.Server) error {
 	serverRepository := repositories.NewServerRepository(service.DB)
 	return serverRepository.UpdateServer(server)

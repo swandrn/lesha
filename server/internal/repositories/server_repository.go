@@ -33,6 +33,16 @@ func (repo *ServerRepository) GetServers() ([]entity.Server, error) {
 	}
 	return servers, nil
 }
+func (repo *ServerRepository) GetUserServers(userID uint) ([]entity.Server, error) {
+	var servers []entity.Server
+	err := repo.DB.Joins("JOIN user_servers ON servers.id = user_servers.server_id").
+		Where("user_servers.user_id = ?", userID).
+		Find(&servers).Error
+	if err != nil {
+		return nil, err
+	}
+	return servers, nil
+}
 func (repo *ServerRepository) UpdateServer(server *entity.Server) error {
 	return repo.DB.Save(server).Error
 }
