@@ -141,6 +141,14 @@ Users can add emoji reactions to messages:
 - Node.js 16+
 - MySQL database
 
+.env dans /server (racine)
+exemple:
+
+DB_URL="root:@tcp(127.0.0.1:3306)/lesha?charset=utf8mb4&parseTime=True&loc=Local"
+JWT_SECRET="secret"
+
+
+
 ### Backend Setup
 
 1. Clone the repository
