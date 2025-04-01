@@ -6,9 +6,6 @@ import { Chat } from "./Chat";
 import EditAccount from "./EditAccount";
 import { FriendList } from "./FriendList";
 import CreateServer from "./CreateServer";
-import { Sidebar } from "./Sidebar";
-import { useState } from "react";
-import { useUser } from "../hooks/useUser";
 
 export interface Server {
     id: number;
