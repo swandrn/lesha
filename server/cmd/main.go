@@ -66,12 +66,13 @@ func main() {
 	r.HandleFunc("/channels/{id}", channelController.GetChannel).Methods("GET")
 	r.HandleFunc("/channels/{id}", channelController.UpdateChannel).Methods("PUT")
 	r.HandleFunc("/channels/{id}", channelController.DeleteChannel).Methods("DELETE")
+	r.HandleFunc("/servers/{id}/channels", channelController.GetServerChannels).Methods("GET")
 
 	// Initialize server controller
 	serverController := controllers.NewServerController(services.NewServerService(db), services.NewChannelService(db))
 
 	// Server routes
-	r.HandleFunc("/servers", serverController.GetServers).Methods("GET")
+	r.HandleFunc("/servers", serverController.GetUserServers).Methods("GET")
 
 	r.HandleFunc("/servers", serverController.CreateServer).Methods("POST")
 	r.HandleFunc("/servers/{id}", serverController.GetServer).Methods("GET")

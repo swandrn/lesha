@@ -42,3 +42,11 @@ func (repo *ChannelRepository) DeleteChannel(channel *entity.Channel) error {
 func (repo *ChannelRepository) AddUserToChannel(channelID uint, userID uint) error {
 	return repo.DB.Exec("INSERT INTO user_channels (channel_id, user_id) VALUES (?, ?)", channelID, userID).Error
 }
+func (repo *ChannelRepository) GetServerChannels(serverId string) ([]entity.Channel, error) {
+	var channels []entity.Channel
+	err := repo.DB.Where("server_id = ?", serverId).Find(&channels).Error
+	if err != nil {
+		return nil, err
+	}
+	return channels, nil
+}

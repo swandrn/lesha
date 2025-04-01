@@ -143,3 +143,19 @@ func (c *ChannelController) DeleteChannel(w http.ResponseWriter, r *http.Request
 		"message": "Channel deleted successfully",
 	})
 }
+
+// GetServerChannels returns all channels for a specific server
+func (c *ChannelController) GetServerChannels(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	serverId := vars["id"]
+
+	channels, err := c.channelService.GetServerChannels(serverId)
+	if err != nil {
+		http.Error(w, "Failed to fetch server channels", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(channels)
+}

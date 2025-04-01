@@ -23,7 +23,7 @@ func NewMessageController(messageService *services.MessageService) *MessageContr
 // GetChannelMessages returns all messages in a channel
 func (c *MessageController) GetChannelMessages(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	channelId := vars["channelId"]
+	channelId := vars["channelID"]
 
 	messages, err := c.messageService.GetChannelMessages(channelId)
 	if err != nil {
@@ -55,10 +55,28 @@ func (c *MessageController) GetMessage(w http.ResponseWriter, r *http.Request) {
 // CreateMessage creates a new message
 func (c *MessageController) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	var message entity.Message
-	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
 		return
 	}
+
+	user, err := services.ExtractUserFromToken(cookie.Value)
+	if err != nil {
+		http.Error(w, "Failed to get user", http.StatusUnauthorized)
+		return
+	}
+
+	userID := user.ID
+	message.UserID = userID
+	channelID := r.FormValue("channelID")
+	channelIDUint, err := strconv.ParseUint(channelID, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid channel ID", http.StatusBadRequest)
+		return
+	}
+	message.ChannelID = uint(channelIDUint)
+	message.Content = r.FormValue("content")
 
 	if err := c.messageService.CreateMessage(&message); err != nil {
 		http.Error(w, "Failed to create message", http.StatusInternalServerError)
