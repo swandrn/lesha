@@ -26,12 +26,12 @@ type User struct {
 	Channels    []Channel `gorm:"many2many:user_channels;"`
 	Reactions   []Reaction
 	Messages    []Message
+	Friends     []Friendship `gorm:"foreignKey:UserID"`
 	Name        string
 	DisplayName string
 	Email       string `gorm:"unique"`
 	Password    string
 	Status      bool
-	Friends     []Friendship `gorm:"foreignKey:UserID"`
 }
 
 type Friendship struct {
@@ -71,4 +71,9 @@ type Media struct {
 	Type      string
 	Extension string
 	Url       string
+}
+
+type BlacklistedToken struct {
+	gorm.Model
+	Token string `gorm:"unique"`
 }
