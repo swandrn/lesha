@@ -25,6 +25,7 @@ func (service *MessageService) GetMessage(messageId string) (*entity.Message, er
 }
 
 func (service *MessageService) GetChannelMessages(channelId string) ([]entity.Message, error) {
+
 	messageRepository := repositories.NewMessageRepository(service.DB)
 	return messageRepository.GetChannelMessages(channelId)
 }

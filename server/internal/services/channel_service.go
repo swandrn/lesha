@@ -43,3 +43,8 @@ func (service *ChannelService) AddUserToChannel(channelID uint, userID uint) err
 	channelRepository := repositories.NewChannelRepository(service.DB)
 	return channelRepository.AddUserToChannel(channelID, userID)
 }
+
+func (service *ChannelService) GetServerChannels(serverId string) ([]entity.Channel, error) {
+	channelRepository := repositories.NewChannelRepository(service.DB)
+	return channelRepository.GetServerChannels(serverId)
+}

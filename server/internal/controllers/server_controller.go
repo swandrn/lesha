@@ -27,8 +27,20 @@ func NewServerController(serverService *services.ServerService, channelService *
 }
 
 // GetServers returns all servers
-func (c *ServerController) GetServers(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("userID").(uint)
+func (c *ServerController) GetUserServers(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := services.ExtractUserFromToken(cookie.Value)
+	if err != nil {
+		http.Error(w, "Failed to get user", http.StatusUnauthorized)
+		return
+	}
+
+	userID := user.ID
 	servers, err := c.serverService.GetUserServers(userID)
 	if err != nil {
 		http.Error(w, "Failed to fetch servers", http.StatusInternalServerError)
@@ -58,9 +70,6 @@ func (c *ServerController) GetServer(w http.ResponseWriter, r *http.Request) {
 
 // CreateServer creates a new server
 func (c *ServerController) CreateServer(w http.ResponseWriter, r *http.Request) {
-	// Log the request
-	fmt.Printf("Creating server request from %s: %s %s\n", r.RemoteAddr, r.Method, r.URL.Path)
-
 	// Extract userID from JWT token in context
 	cookie, err := r.Cookie("token")
 	if err != nil {
