@@ -50,7 +50,7 @@ func main() {
 	messageController := controllers.NewMessageController(services.NewMessageService(db))
 
 	// Message routes
-	r.HandleFunc("/channels/{channelId}/messages", services.AuthMiddleware(messageController.GetChannelMessages)).Methods("GET")
+	r.HandleFunc("/channels/{channelID}/messages", services.AuthMiddleware(messageController.GetChannelMessages)).Methods("GET")
 	r.HandleFunc("/messages", services.AuthMiddleware(messageController.CreateMessage)).Methods("POST")
 	r.HandleFunc("/messages/{id}", services.AuthMiddleware(messageController.GetMessage)).Methods("GET")
 	r.HandleFunc("/messages/{id}/pin", services.AuthMiddleware(messageController.PinMessage)).Methods("POST")

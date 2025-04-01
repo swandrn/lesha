@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -22,6 +23,7 @@ func NewMessageController(messageService *services.MessageService) *MessageContr
 
 // GetChannelMessages returns all messages in a channel
 func (c *MessageController) GetChannelMessages(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("GetChannelMessages")
 	vars := mux.Vars(r)
 	channelId := vars["channelID"]
 
@@ -31,6 +33,7 @@ func (c *MessageController) GetChannelMessages(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	fmt.Println(messages)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(messages)
